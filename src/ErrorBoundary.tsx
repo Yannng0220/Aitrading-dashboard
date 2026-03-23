@@ -1,14 +1,16 @@
-import React from 'react';
+import { Component, type ErrorInfo, type PropsWithChildren } from 'react';
 
 type ErrorBoundaryState = {
   hasError: boolean;
   message: string;
 };
 
-export default class ErrorBoundary extends React.Component<
-  React.PropsWithChildren,
+export default class ErrorBoundary extends Component<
+  PropsWithChildren<object>,
   ErrorBoundaryState
 > {
+  declare props: PropsWithChildren<object>;
+
   state: ErrorBoundaryState = {
     hasError: false,
     message: '',
@@ -21,7 +23,7 @@ export default class ErrorBoundary extends React.Component<
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Application render error:', error, errorInfo);
   }
 

@@ -17,11 +17,15 @@ import {
   Info,
   AlertCircle,
   ShieldAlert,
+  BrainCircuit,
+  LayoutDashboard,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from './lib/utils';
 import { Agent, MarketData, Trade, Position } from './types';
 import { generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
+import Learning from './pages/Learning';
 
 const AGENT_COUNT = 100;
 const AGENTS_STORAGE_KEY = 'agentsState:v2';
@@ -48,6 +52,8 @@ const parseSavedState = (raw: string | null): SavedAgentsState | null => {
 };
 
 export default function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [isPaused, setIsPaused] = useState(false);
@@ -237,6 +243,7 @@ export default function App() {
   const liquidatedAgents = agents.filter(a => a.equity <= 0).sort((a, b) => b.performance - a.performance);
   const totalEquity = agents.reduce((sum, a) => sum + a.equity, 0);
   const avgPerformance = agents.reduce((sum, a) => sum + a.performance, 0) / AGENT_COUNT;
+  const currentPage = location.pathname === '/learning' ? 'learning' : 'dashboard';
 
   const selectedAgent = selectedAgentId !== null ? agents.find(a => a.id === selectedAgentId) : null;
 
@@ -249,7 +256,35 @@ export default function App() {
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
               <Zap className="w-5 h-5 text-black fill-current" />
             </div>
-            <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl">Yang-RotBot Trading</h1>
+            <div className="space-y-1">
+              <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl">Yang-RotBot Trading</h1>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => navigate('/')}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                    currentPage === 'dashboard'
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                      : 'border-white/10 bg-white/5 text-white/50 hover:text-white'
+                  )}
+                >
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => navigate('/learning')}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                    currentPage === 'learning'
+                      ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
+                      : 'border-white/10 bg-white/5 text-white/50 hover:text-white'
+                  )}
+                >
+                  <BrainCircuit className="h-3.5 w-3.5" />
+                  Learning
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:flex-nowrap md:gap-6">
@@ -325,6 +360,9 @@ export default function App() {
         </div>
       </header>
 
+      {currentPage === 'learning' ? (
+        <Learning agents={agents} />
+      ) : (
       <main className="max-w-[1600px] mx-auto p-4 grid grid-cols-12 gap-4 sm:p-6 sm:gap-6">
         <div className="col-span-12 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.08)] sm:px-5">
           <div className="flex items-start gap-3">
@@ -751,6 +789,7 @@ export default function App() {
           </div>
         </div>
       </main>
+      )}
 
       {/* Footer */}
       <footer className="max-w-[1600px] mx-auto px-6 py-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
