@@ -226,15 +226,15 @@ export default function App() {
     <div className="min-h-screen bg-[#0a0a0a] text-[#e0e0e0] font-sans selection:bg-emerald-500/30">
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-4 py-4 flex flex-col gap-4 sm:px-6 md:h-16 md:flex-row md:items-center md:justify-between md:py-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
               <Zap className="w-5 h-5 text-black fill-current" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-white">Yang-RotBot Trading</h1>
+            <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl">Yang-RotBot Trading</h1>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:flex-nowrap md:gap-6">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-[10px] font-bold tracking-widest uppercase">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Live Market Engine
@@ -307,8 +307,8 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto p-6 grid grid-cols-12 gap-6">
-        <div className="col-span-12 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.08)]">
+      <main className="max-w-[1600px] mx-auto p-4 grid grid-cols-12 gap-4 sm:p-6 sm:gap-6">
+        <div className="col-span-12 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.08)] sm:px-5">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 rounded-xl bg-amber-400/15 p-2 text-amber-300">
               <ShieldAlert className="h-5 w-5" />
@@ -329,7 +329,7 @@ export default function App() {
         <div className="col-span-12 lg:col-span-8 space-y-6">
           
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <StatCard 
               label="活躍代理" 
               value={AGENT_COUNT} 
@@ -358,14 +358,14 @@ export default function App() {
           </div>
 
           {/* Market Ticker Wall (Optional, but useful to see prices) */}
-          <div className="bg-[#111] border border-white/5 rounded-2xl p-6 shadow-2xl">
+          <div className="bg-[#111] border border-white/5 rounded-2xl p-4 shadow-2xl sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold uppercase tracking-widest text-white/60 flex items-center gap-2">
                 <Activity className="w-4 h-4" /> Bybit 多資產數據流
               </h2>
               <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">實時報價</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3 max-h-[180px] sm:max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
               {Object.entries(prices).slice(0, 20).map(([symbol, price]) => (
                 <div key={symbol} className="bg-black/40 border border-white/5 rounded-lg p-2 flex flex-col items-center">
                   <span className="text-[9px] font-bold text-white/40">{symbol}</span>
@@ -485,14 +485,14 @@ export default function App() {
         <div className="col-span-12 lg:col-span-4 space-y-6">
           
           {/* Top Performers */}
-          <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
+          <div className="bg-[#111] border border-white/5 rounded-2xl p-4 sm:p-6">
             <h2 className="text-sm font-bold uppercase tracking-widest text-white/60 mb-6 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-emerald-500" /> 績效排行榜
             </h2>
             <div className="space-y-4">
               {topPerformers.map((agent, idx) => (
-                <div key={agent.id} className="flex items-center justify-between group cursor-pointer" onClick={() => setSelectedAgentId(agent.id)}>
-                  <div className="flex items-center gap-3">
+                <div key={agent.id} className="flex flex-col items-start justify-between gap-2 group cursor-pointer sm:flex-row sm:items-center" onClick={() => setSelectedAgentId(agent.id)}>
+                  <div className="flex items-center gap-3 min-w-0">
                     <span className="text-xs font-mono text-white/20 w-4">{idx + 1}</span>
                     <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-xs font-bold border border-white/10 group-hover:border-emerald-500/50 transition-colors">
                       {agent.name.charAt(0)}
@@ -502,7 +502,7 @@ export default function App() {
                       <p className="text-[10px] text-white/40">{agent.strategyType}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <p className="text-xs font-mono font-bold text-emerald-400">+{agent.performance.toFixed(2)}%</p>
                     <p className="text-[10px] text-white/20">${(agent.equity / 1000).toFixed(1)}k</p>
                   </div>
@@ -513,13 +513,13 @@ export default function App() {
 
           {/* Liquidated Agents */}
           {liquidatedAgents.length > 0 && (
-            <div className="bg-[#111] border border-rose-500/20 rounded-2xl p-6">
+            <div className="bg-[#111] border border-rose-500/20 rounded-2xl p-4 sm:p-6">
               <h2 className="text-sm font-bold uppercase tracking-widest text-rose-500/60 mb-6 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-rose-500" /> 已爆倉代理人 ({liquidatedAgents.length})
               </h2>
               <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                 {liquidatedAgents.map((agent) => (
-                  <div key={agent.id} className="flex items-center justify-between group cursor-pointer" onClick={() => setSelectedAgentId(agent.id)}>
+                  <div key={agent.id} className="flex flex-col items-start justify-between gap-2 group cursor-pointer sm:flex-row sm:items-center" onClick={() => setSelectedAgentId(agent.id)}>
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-rose-500/5 flex items-center justify-center text-xs font-bold border border-rose-500/10 group-hover:border-rose-500/50 transition-colors">
                         {agent.name.charAt(0)}
@@ -529,7 +529,7 @@ export default function App() {
                         <p className="text-[10px] text-white/20">{agent.strategyType}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
                       <p className="text-xs font-mono font-bold text-rose-500">-100%</p>
                       <p className="text-[10px] text-white/10">$0.0</p>
                     </div>
@@ -547,7 +547,7 @@ export default function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
-                className="bg-[#111] border border-emerald-500/30 rounded-2xl p-6 shadow-[0_0_50px_rgba(16,185,129,0.1)]"
+                className="bg-[#111] border border-emerald-500/30 rounded-2xl p-4 shadow-[0_0_50px_rgba(16,185,129,0.1)] sm:p-6"
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-sm font-bold uppercase tracking-widest text-emerald-500 flex items-center gap-2">
@@ -585,7 +585,7 @@ export default function App() {
                     <div className="space-y-2">
                       {Object.values(selectedAgent.activePositions).length > 0 ? (
                         Object.values(selectedAgent.activePositions).map((pos: Position) => (
-                          <div key={pos.symbol} className="flex items-center justify-between bg-white/5 rounded-lg p-2 border border-white/5">
+                          <div key={pos.symbol} className="flex flex-col gap-3 bg-white/5 rounded-lg p-2 border border-white/5 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="text-xs font-bold text-white">{pos.symbol}</p>
@@ -608,7 +608,7 @@ export default function App() {
                                 實際價值: ${(pos.amount * pos.avgEntryPrice / pos.leverage).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD {pos.leverage}x
                               </p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-left sm:text-right">
                               <p className="text-xs font-mono text-emerald-400">${(prices[pos.symbol] || 0).toLocaleString()}</p>
                               <p className={cn(
                                 "text-[10px] font-mono",
@@ -637,8 +637,8 @@ export default function App() {
                       {selectedAgent.trades.length > 0 ? (
                         selectedAgent.trades.slice().reverse().map(trade => (
                           <div key={trade.id} className="group/trade bg-black/40 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-all">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
+                            <div className="flex flex-col items-start gap-2 mb-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <span className={cn(
                                   "text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider",
                                   trade.type === 'BUY' ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
@@ -655,7 +655,7 @@ export default function App() {
                                 {trade.reason}
                               </p>
                             </div>
-                            <div className="mt-2 pt-2 border-t border-white/5 flex flex-wrap justify-between items-center gap-2">
+                            <div className="mt-2 pt-2 border-t border-white/5 flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:justify-between sm:items-center">
                               <div className="flex gap-3">
                                 <span className="text-[9px] text-white/30 uppercase font-bold">
                                   實際價值: {(trade.amount * trade.price / (trade.leverage || 1)).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD {trade.leverage && `${trade.leverage}x`}
@@ -697,7 +697,7 @@ export default function App() {
                 </div>
               </motion.div>
             ) : (
-              <div className="bg-[#111] border border-white/5 rounded-2xl p-12 text-center space-y-4">
+              <div className="bg-[#111] border border-white/5 rounded-2xl p-8 text-center space-y-4 sm:p-12">
                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto">
                   <Activity className="w-8 h-8 text-white/10" />
                 </div>
