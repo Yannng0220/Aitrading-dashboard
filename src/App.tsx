@@ -26,6 +26,7 @@ import { cn } from './lib/utils';
 import { Agent, MarketData, Trade, Position } from './types';
 import { generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
 import Learning from './pages/Learning';
+import LearningAgentDetail from './pages/LearningAgentDetail';
 
 const AGENT_COUNT = 100;
 const AGENTS_STORAGE_KEY = 'agentsState:v2';
@@ -243,9 +244,16 @@ export default function App() {
   const liquidatedAgents = agents.filter(a => a.equity <= 0).sort((a, b) => b.performance - a.performance);
   const totalEquity = agents.reduce((sum, a) => sum + a.equity, 0);
   const avgPerformance = agents.reduce((sum, a) => sum + a.performance, 0) / AGENT_COUNT;
-  const currentPage = location.pathname === '/learning' ? 'learning' : 'dashboard';
+  const learningAgentMatch = location.pathname.match(/^\/learning\/agent\/(\d+)$/);
+  const learningAgentId = learningAgentMatch ? Number(learningAgentMatch[1]) : null;
+  const currentPage = learningAgentId !== null
+    ? 'learning-agent'
+    : location.pathname === '/learning'
+      ? 'learning'
+      : 'dashboard';
 
   const selectedAgent = selectedAgentId !== null ? agents.find(a => a.id === selectedAgentId) : null;
+  const selectedLearningAgent = learningAgentId !== null ? agents.find((agent) => agent.id === learningAgentId) ?? null : null;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#e0e0e0] font-sans selection:bg-emerald-500/30">
@@ -277,7 +285,7 @@ export default function App() {
                 onClick={() => navigate('/learning')}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
-                  currentPage === 'learning'
+                  currentPage === 'learning' || currentPage === 'learning-agent'
                     ? 'bg-sky-500/10 text-sky-300'
                     : 'text-white/50 hover:text-white'
                 )}
@@ -360,7 +368,9 @@ export default function App() {
       </header>
 
       {currentPage === 'learning' ? (
-        <Learning agents={agents} />
+        <Learning agents={agents} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} />
+      ) : currentPage === 'learning-agent' ? (
+        <LearningAgentDetail agent={selectedLearningAgent} onBack={() => navigate('/learning')} />
       ) : (
       <main className="max-w-[1600px] mx-auto p-4 grid grid-cols-12 gap-4 sm:p-6 sm:gap-6">
         <div className="col-span-12 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.08)] sm:px-5">
