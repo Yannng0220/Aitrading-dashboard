@@ -415,11 +415,21 @@ export default function App() {
                           style={{ backgroundColor: agent.color }}
                         />
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">{agent.name}</h3>
                             <span className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] font-mono text-white/60 border border-white/5">
                               {Object.keys(agent.activePositions).length} 持倉
                             </span>
+                            {(Object.values(agent.activePositions) as Position[]).some((pos) => pos.side === 'LONG') && (
+                              <span className="px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/10 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
+                                LONG
+                              </span>
+                            )}
+                            {(Object.values(agent.activePositions) as Position[]).some((pos) => pos.side === 'SHORT') && (
+                              <span className="px-1.5 py-0.5 rounded border border-rose-500/20 bg-rose-500/10 text-[9px] font-bold uppercase tracking-widest text-rose-400">
+                                SHORT
+                              </span>
+                            )}
                           </div>
                           <p className="text-[10px] text-white/40 font-mono uppercase tracking-tighter">{agent.strategyType}</p>
                         </div>
@@ -577,8 +587,16 @@ export default function App() {
                         Object.values(selectedAgent.activePositions).map((pos: Position) => (
                           <div key={pos.symbol} className="flex items-center justify-between bg-white/5 rounded-lg p-2 border border-white/5">
                             <div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <p className="text-xs font-bold text-white">{pos.symbol}</p>
+                                <span className={cn(
+                                  "px-1 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest border",
+                                  pos.side === 'SHORT'
+                                    ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                    : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                )}>
+                                  {pos.side === 'SHORT' ? 'SHORT' : 'LONG'}
+                                </span>
                                 <span className="px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[8px] font-bold uppercase tracking-widest">
                                   {pos.leverage}x 槓桿
                                 </span>
