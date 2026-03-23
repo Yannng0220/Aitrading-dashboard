@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -414,97 +414,97 @@ export default function App() {
 
   const selectedAgent = selectedAgentId !== null ? agents.find(a => a.id === selectedAgentId) : null;
   const selectedLearningAgent = learningAgentId !== null ? agents.find((agent) => agent.id === learningAgentId) ?? null : null;
-  const ui = lang === 'zh'
-    ? {
-        navDashboard: '儀表板',
-        navLearning: '學習頁',
-        liveEngine: '即時市場引擎',
-        selectorPlaceholder: '選擇 AI',
-        selectorSearch: '搜尋名稱或策略...',
-        marketStatusLabel: '市場狀態',
-        marketStatusValue: '多資產',
-        footerAbout: '關於',
-        footerPrivacy: '隱私',
-        footerDashboard: '儀表板',
-        footerCopyright: '© 2026 Yang-RotBot Trading • 模擬交易環境',
-        aboutTitle: '關於 Yang-RotBot Trading',
-        aboutDescription: 'Yang-RotBot Trading 是一個以瀏覽器為基礎的交易模擬儀表板，用來展示多代理策略行為、介面設計，以及教育用途的市場分析。',
-        aboutSections: [
-          {
-            heading: '網站用途',
-            body: '本站展示模擬代理、資產變化、策略日誌與學習建議，讓訪客可以在可控環境中理解交易規則如何隨時間運作。',
-          },
-          {
-            heading: '資訊性質',
-            body: '本站顯示的所有資料、績效結果與策略洞察都屬於模擬內容，不構成投資建議、交易建議，也不保證真實世界的金融結果。',
-          },
-          {
-            heading: '內容說明',
-            body: '此頁面用來清楚說明產品定位、模擬範圍與教育目的，讓訪客不只看到即時介面，也能理解網站提供的內容。',
-          },
-        ],
-        privacyTitle: '隱私政策',
-        privacyDescription: '本站可能會儲存有限的瀏覽器資料，並處理呈現儀表板、維持同步與提供伺服器功能所需的請求。',
-        privacySections: [
-          {
-            heading: '瀏覽器儲存',
-            body: '網站可能會在瀏覽器中保存裝置識別、介面狀態與模擬快照，讓頁面重新整理後能正確恢復並維持跨工作階段連續性。',
-          },
-          {
-            heading: 'Cloudflare 處理',
-            body: '本站請求可能由 Cloudflare Pages、Workers、Durable Objects、KV 與相關記錄服務處理，以支援路由、同步、可靠性與效能。',
-          },
-          {
-            heading: '廣告與第三方服務',
-            body: '如果啟用廣告或分析服務，相關供應商可能會依其自身政策處理資料。站主應額外揭露任何啟用中的第三方服務。',
-          },
-        ],
-      }
-    : {
-        navDashboard: 'Dashboard',
-        navLearning: 'Learning',
-        liveEngine: 'Live Market Engine',
-        selectorPlaceholder: 'Select AI',
-        selectorSearch: 'Search by name or strategy...',
-        marketStatusLabel: 'Market Status',
-        marketStatusValue: 'Multi-Asset',
-        footerAbout: 'About',
-        footerPrivacy: 'Privacy',
-        footerDashboard: 'Dashboard',
-        footerCopyright: '© 2026 Yang-RotBot Trading • Simulation Trading Environment',
-        aboutTitle: 'About Yang-RotBot Trading',
-        aboutDescription: 'Yang-RotBot Trading is a browser-based trading simulation dashboard built to demonstrate multi-agent strategy behavior, interface design, and educational market analysis.',
-        aboutSections: [
-          {
-            heading: 'Purpose of the site',
-            body: 'This website presents simulated agents, portfolio changes, strategy logs, and learning suggestions so visitors can understand how trading rules behave over time in a controlled environment.',
-          },
-          {
-            heading: 'Nature of the information',
-            body: 'All data, performance results, and strategy insights shown on this site are part of a simulation. They do not constitute investment advice, trading advice, or any guarantee of real-world financial results.',
-          },
-          {
-            heading: 'Publisher content',
-            body: 'This page exists to clearly explain the product, the simulation scope, and the educational purpose of the dashboard so that visitors can understand what the site is about beyond the live interface.',
-          },
-        ],
-        privacyTitle: 'Privacy Policy',
-        privacyDescription: 'This website may store limited browser data and process operational requests needed to render the dashboard, maintain synchronization, and deliver server-side features.',
-        privacySections: [
-          {
-            heading: 'Browser storage',
-            body: 'The site may store local identifiers, interface state, and simulation snapshots in browser storage so pages can recover correctly after refresh and maintain cross-session continuity.',
-          },
-          {
-            heading: 'Cloudflare processing',
-            body: 'Requests may be handled by Cloudflare Pages, Workers, Durable Objects, KV, and related logging services for routing, synchronization, reliability, and performance.',
-          },
-          {
-            heading: 'Advertising and third parties',
-            body: 'If advertising or analytics services are enabled, those providers may apply their own policies and data handling practices. The site owner should disclose any active third-party services accordingly.',
-          },
-        ],
-      };
+  const ui = {
+    navDashboard: 'Dashboard',
+    navLearning: 'Learning',
+    liveEngine: 'Live Market Engine',
+    selectorPlaceholder: 'Select AI',
+    selectorSearch: 'Search by name or strategy...',
+    marketStatusLabel: 'Market Status',
+    marketStatusValue: 'Multi-Asset',
+    footerAbout: 'About',
+    footerPrivacy: 'Privacy',
+    footerDashboard: 'Dashboard',
+    footerCopyright: '© 2026 Yang-RotBot Trading Simulation Trading Environment',
+    aboutTitle: 'About Yang-RotBot Trading',
+    aboutDescription: 'Yang-RotBot Trading is a browser-based trading simulation dashboard built to demonstrate multi-agent strategy behavior, interface design, and educational market analysis.',
+    aboutSections: [
+      {
+        heading: 'Purpose of the site',
+        body: 'This website presents simulated agents, portfolio changes, strategy logs, and learning suggestions so visitors can understand how trading rules behave over time in a controlled environment.',
+      },
+      {
+        heading: 'Nature of the information',
+        body: 'All data, performance results, and strategy insights shown on this site are part of a simulation. They do not constitute investment advice, trading advice, or any guarantee of real-world financial results.',
+      },
+      {
+        heading: 'Publisher content',
+        body: 'This page exists to clearly explain the product, the simulation scope, and the educational purpose of the dashboard so that visitors can understand what the site is about beyond the live interface.',
+      },
+    ],
+    privacyTitle: 'Privacy Policy',
+    privacyDescription: 'This website may store limited browser data and process operational requests needed to render the dashboard, maintain synchronization, and deliver server-side features.',
+    privacySections: [
+      {
+        heading: 'Browser storage',
+        body: 'The site may store local identifiers, interface state, and simulation snapshots in browser storage so pages can recover correctly after refresh and maintain cross-session continuity.',
+      },
+      {
+        heading: 'Cloudflare processing',
+        body: 'Requests may be handled by Cloudflare Pages, Workers, Durable Objects, KV, and related logging services for routing, synchronization, reliability, and performance.',
+      },
+      {
+        heading: 'Advertising and third parties',
+        body: 'If advertising or analytics services are enabled, those providers may apply their own policies and data handling practices. The site owner should disclose any active third-party services accordingly.',
+      },
+    ],
+  };
+  const locale = lang === 'en' ? 'en-US' : 'zh-TW';
+  const display = {
+    simulationBannerTitle: 'Simulation Environment Notice',
+    simulationBannerBody: 'This interface shows trading simulations and strategy observations only. It does not connect to a live brokerage account or execute real orders on your behalf.',
+    simulationBannerNote: 'Treat the performance, positions, and recommendations shown here as educational simulation output, not as an investment promise or profit guarantee.',
+    statsAgents: 'AI Agents',
+    statsEquity: 'Total Equity',
+    statsLatency: 'System Latency',
+    statsUptime: 'Uptime',
+    statsLatencyTrend: 'Stable',
+    statsUptimeTrend: 'Running',
+    tickerTitle: 'Bybit Market Prices',
+    tickerLive: 'Live',
+    agentsPanelTitle: 'AI Agent List',
+    agentsSearchPlaceholder: 'Search agents or strategies...',
+    positionsCount: 'Positions',
+    equityLabel: 'Equity',
+    unrealizedPnlLabel: 'Unrealized PnL',
+    showingAgents: (count: number) => `Showing top 12 of ${count} agents`,
+    topPerformers: 'Top Performers',
+    liquidatedAgents: (count: number) => `Liquidated Agents (${count})`,
+    agentDetailTitle: 'Agent Detail',
+    openPositions: 'Open Positions',
+    currentUnrealized: 'Current Unrealized PnL',
+    leverageLabel: 'Leverage',
+    quantityLabel: 'Quantity',
+    marginLabel: 'Margin',
+    noOpenPositions: 'No open positions right now.',
+    recentTrades: 'Recent Trade History',
+    recentTradesLimit: 'Last 20',
+    feeLabel: 'Fee',
+    realizedPnlLabel: 'Realized PnL',
+    noTrades: 'No trades have been recorded yet.',
+    strategyOverview: 'Strategy Overview',
+    strategyConfidenceText: 'Current strategy type:',
+    strategyConfidenceSuffix: 'with a simulated confidence score of',
+    emptySelectionTitle: 'No Agent Selected',
+    emptySelectionBody: 'Choose an AI from the list or selector to inspect positions, trade history, and strategy notes.',
+    systemLogs: 'System Logs',
+    logs: [
+      'System ready. 100 AI agents are active.',
+      'Latency check completed in 1.2ms.',
+      'Market feed connected through WebSocket.',
+      'Risk monitor detected 7 high-volatility symbols.',
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#e0e0e0] font-sans selection:bg-emerald-500/30">
@@ -648,93 +648,69 @@ export default function App() {
           sections={ui.privacySections}
         />
       ) : (
-      <main className="max-w-[1600px] mx-auto p-4 grid grid-cols-12 gap-4 sm:p-6 sm:gap-6">
+      <main className="max-w-[1600px] mx-auto grid grid-cols-12 gap-4 p-4 sm:gap-6 sm:p-6">
         <div className="col-span-12 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.08)] sm:px-5">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 rounded-xl bg-amber-400/15 p-2 text-amber-300">
               <ShieldAlert className="h-5 w-5" />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-bold tracking-wide text-amber-200">風險與免責聲明</p>
-              <p className="text-sm leading-relaxed text-amber-50/90">
-                本網站內容、模擬數據、代理策略、績效展示與任何訊號，均不構成投資建議、交易建議、財務建議或任何獲利保證，僅供產品展示、研究模擬與娛樂用途。
-              </p>
-              <p className="text-xs leading-relaxed text-amber-100/70">
-                請勿將本頁資訊視為真實下單依據；任何投資決策與風險，應由使用者自行判斷並自行承擔。
-              </p>
+              <p className="text-sm font-bold tracking-wide text-amber-200">{display.simulationBannerTitle}</p>
+              <p className="text-sm leading-relaxed text-amber-50/90">{display.simulationBannerBody}</p>
+              <p className="text-xs leading-relaxed text-amber-100/70">{display.simulationBannerNote}</p>
             </div>
           </div>
         </div>
-        
-        {/* Left Column: Market Overview */}
+
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <StatCard 
-              label="活躍代理" 
-              value={AGENT_COUNT} 
-              icon={<Users className="w-4 h-4" />} 
-              trend="+0"
-            />
-            <StatCard 
-              label="總資產管理規模" 
-              value={`$${(totalEquity / 1000000).toFixed(2)}M`} 
-              icon={<Wallet className="w-4 h-4" />} 
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+            <StatCard label={display.statsAgents} value={AGENT_COUNT} icon={<Users className="w-4 h-4" />} trend="+0" />
+            <StatCard
+              label={display.statsEquity}
+              value={`$${(totalEquity / 1000000).toFixed(2)}M`}
+              icon={<Wallet className="w-4 h-4" />}
               trend={`${avgPerformance > 0 ? '+' : ''}${avgPerformance.toFixed(2)}%`}
               trendUp={avgPerformance > 0}
             />
-            <StatCard 
-              label="網絡負載" 
-              value="1.2ms" 
-              icon={<Cpu className="w-4 h-4" />} 
-              trend="最佳"
-            />
-            <StatCard 
-              label="運行時間" 
-              value={elapsedTime} 
-              icon={<Clock className="w-4 h-4" />} 
-              trend="實時"
-            />
+            <StatCard label={display.statsLatency} value="1.2ms" icon={<Cpu className="w-4 h-4" />} trend={display.statsLatencyTrend} />
+            <StatCard label={display.statsUptime} value={elapsedTime} icon={<Clock className="w-4 h-4" />} trend={display.statsUptimeTrend} />
           </div>
 
-          {/* Market Ticker Wall (Optional, but useful to see prices) */}
-          <div className="bg-[#111] border border-white/5 rounded-2xl p-4 shadow-2xl sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-white/60 flex items-center gap-2">
-                <Activity className="w-4 h-4" /> Bybit 多資產數據流
+          <div className="rounded-2xl border border-white/5 bg-[#111] p-4 shadow-2xl sm:p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+                <Activity className="w-4 h-4" /> {display.tickerTitle}
               </h2>
-              <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">實時報價</span>
+              <span className="rounded bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-500">{display.tickerLive}</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3 max-h-[180px] sm:max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid max-h-[180px] grid-cols-2 gap-2 overflow-y-auto pr-2 custom-scrollbar sm:max-h-[120px] sm:gap-3 md:grid-cols-5">
               {Object.entries(prices).slice(0, 20).map(([symbol, price]) => (
-                <div key={symbol} className="bg-black/40 border border-white/5 rounded-lg p-2 flex flex-col items-center">
+                <div key={symbol} className="flex flex-col items-center rounded-lg border border-white/5 bg-black/40 p-2">
                   <span className="text-[9px] font-bold text-white/40">{symbol}</span>
                   <span className="text-xs font-mono text-emerald-400">
-                    ${(price as number) > 1 ? (price as number).toLocaleString() : (price as number).toFixed(4)}
+                    ${(price as number) > 1 ? (price as number).toLocaleString(locale) : (price as number).toFixed(4)}
                   </span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Agent Grid */}
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-white/60">代理艦隊狀態</h2>
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-white/60">{display.agentsPanelTitle}</h2>
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
-                <input 
-                  type="text" 
-                  placeholder="按名稱或策略過濾..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/20" />
+                <input
+                  type="text"
+                  placeholder={display.agentsSearchPlaceholder}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm transition-colors focus:border-emerald-500/50 focus:outline-none"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <AnimatePresence mode="popLayout">
                 {filteredAgents.slice(0, 12).map((agent) => (
                   <motion.div
@@ -745,101 +721,84 @@ export default function App() {
                     exit={{ opacity: 0, scale: 0.95 }}
                     onClick={() => setSelectedAgentId(agent.id)}
                     className={cn(
-                      "group relative bg-[#111] border border-white/5 rounded-xl p-4 cursor-pointer transition-all hover:border-emerald-500/30 hover:bg-[#151515]",
-                      selectedAgentId === agent.id && "border-emerald-500 ring-1 ring-emerald-500/50"
+                      'group relative cursor-pointer rounded-xl border border-white/5 bg-[#111] p-4 transition-all hover:border-emerald-500/30 hover:bg-[#151515]',
+                      selectedAgentId === agent.id && 'border-emerald-500 ring-1 ring-emerald-500/50'
                     )}
                   >
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="mb-3 flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div 
-                          className="w-2 h-2 rounded-full animate-pulse" 
-                          style={{ backgroundColor: agent.color }}
-                        />
+                        <div className="h-2 w-2 animate-pulse rounded-full" style={{ backgroundColor: agent.color }} />
                         <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">{agent.name}</h3>
-                            <span className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] font-mono text-white/60 border border-white/5">
-                              {Object.keys(agent.activePositions).length} 持倉
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-sm font-bold text-white transition-colors group-hover:text-emerald-400">{agent.name}</h3>
+                            <span className="rounded border border-white/5 bg-white/5 px-1.5 py-0.5 text-[9px] font-mono text-white/60">
+                              {Object.keys(agent.activePositions).length} {display.positionsCount}
                             </span>
                             {(Object.values(agent.activePositions) as Position[]).some((pos) => pos.side === 'LONG') && (
-                              <span className="px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/10 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
+                              <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
                                 LONG
                               </span>
                             )}
                             {(Object.values(agent.activePositions) as Position[]).some((pos) => pos.side === 'SHORT') && (
-                              <span className="px-1.5 py-0.5 rounded border border-rose-500/20 bg-rose-500/10 text-[9px] font-bold uppercase tracking-widest text-rose-400">
+                              <span className="rounded border border-rose-500/20 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-rose-400">
                                 SHORT
                               </span>
                             )}
                           </div>
-                          <p className="text-[10px] text-white/40 font-mono uppercase tracking-tighter">{agent.strategyType}</p>
+                          <p className="text-[10px] font-mono uppercase tracking-tighter text-white/40">{agent.strategyType}</p>
                         </div>
                       </div>
-                      <div className={cn(
-                        "text-xs font-mono font-bold",
-                        agent.performance >= 0 ? "text-emerald-400" : "text-rose-400"
-                      )}>
+                      <div className={cn('text-xs font-mono font-bold', agent.performance >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                         {agent.performance >= 0 ? '+' : ''}{agent.performance.toFixed(2)}%
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      <div className="bg-black/40 rounded-lg p-2 border border-white/5">
-                        <p className="text-[8px] uppercase text-white/30 font-bold mb-1">淨值</p>
-                        <p className="text-xs font-mono">${agent.equity.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                    <div className="mb-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-lg border border-white/5 bg-black/40 p-2">
+                        <p className="mb-1 text-[8px] font-bold uppercase text-white/30">{display.equityLabel}</p>
+                        <p className="text-xs font-mono">${agent.equity.toLocaleString(locale, { maximumFractionDigits: 0 })}</p>
                       </div>
-                      <div className="bg-black/40 rounded-lg p-2 border border-white/5">
-                        <p className="text-[8px] uppercase text-white/30 font-bold mb-1">浮動盈虧</p>
-                        <p className={cn(
-                          "text-xs font-mono font-bold",
-                          agent.unrealizedPL >= 0 ? "text-emerald-400" : "text-rose-400"
-                        )}>
+                      <div className="rounded-lg border border-white/5 bg-black/40 p-2">
+                        <p className="mb-1 text-[8px] font-bold uppercase text-white/30">{display.unrealizedPnlLabel}</p>
+                        <p className={cn('text-xs font-mono font-bold', agent.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                           {agent.unrealizedPL >= 0 ? '+' : ''}${agent.unrealizedPL.toFixed(2)}
                         </p>
                       </div>
                     </div>
 
-                    {/* Mini Sparkline Placeholder */}
-                    <div className="h-8 w-full flex items-end gap-0.5 opacity-30 group-hover:opacity-60 transition-opacity">
+                    <div className="flex h-8 w-full items-end gap-0.5 opacity-30 transition-opacity group-hover:opacity-60">
                       {Array.from({ length: 15 }).map((_, i) => (
-                        <div 
-                          key={i} 
-                          className="flex-1 bg-emerald-500 rounded-t-[1px]" 
-                          style={{ height: `${20 + Math.random() * 80}%` }}
-                        />
+                        <div key={i} className="flex-1 rounded-t-[1px] bg-emerald-500" style={{ height: `${20 + Math.random() * 80}%` }} />
                       ))}
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
             </div>
-            
+
             {filteredAgents.length > 12 && (
-              <div className="text-center py-4">
-                <p className="text-xs text-white/20 font-mono">顯示符合條件的 {filteredAgents.length} 個代理中的 12 個</p>
+              <div className="py-4 text-center">
+                <p className="text-xs font-mono text-white/20">{display.showingAgents(filteredAgents.length)}</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Leaderboard & Details */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          
-          {/* Top Performers */}
-          <div className="bg-[#111] border border-white/5 rounded-2xl p-4 sm:p-6">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-white/60 mb-6 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-500" /> 績效排行榜
+          <div className="rounded-2xl border border-white/5 bg-[#111] p-4 sm:p-6">
+            <h2 className="mb-6 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+              <TrendingUp className="w-4 h-4 text-emerald-500" /> {display.topPerformers}
             </h2>
             <div className="space-y-4">
               {topPerformers.map((agent, idx) => (
-                <div key={agent.id} className="flex flex-col items-start justify-between gap-2 group cursor-pointer sm:flex-row sm:items-center" onClick={() => setSelectedAgentId(agent.id)}>
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-xs font-mono text-white/20 w-4">{idx + 1}</span>
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-xs font-bold border border-white/10 group-hover:border-emerald-500/50 transition-colors">
+                <div key={agent.id} className="group flex cursor-pointer flex-col items-start justify-between gap-2 sm:flex-row sm:items-center" onClick={() => setSelectedAgentId(agent.id)}>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="w-4 text-xs font-mono text-white/20">{idx + 1}</span>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-xs font-bold transition-colors group-hover:border-emerald-500/50">
                       {agent.name.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{agent.name}</p>
+                      <p className="text-xs font-bold text-white transition-colors group-hover:text-emerald-400">{agent.name}</p>
                       <p className="text-[10px] text-white/40">{agent.strategyType}</p>
                     </div>
                   </div>
@@ -852,21 +811,20 @@ export default function App() {
             </div>
           </div>
 
-          {/* Liquidated Agents */}
           {liquidatedAgents.length > 0 && (
-            <div className="bg-[#111] border border-rose-500/20 rounded-2xl p-4 sm:p-6">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-rose-500/60 mb-6 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-500" /> 已爆倉代理人 ({liquidatedAgents.length})
+            <div className="rounded-2xl border border-rose-500/20 bg-[#111] p-4 sm:p-6">
+              <h2 className="mb-6 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-rose-500/60">
+                <AlertCircle className="w-4 h-4 text-rose-500" /> {display.liquidatedAgents(liquidatedAgents.length)}
               </h2>
-              <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="max-h-[200px] space-y-4 overflow-y-auto pr-2 custom-scrollbar">
                 {liquidatedAgents.map((agent) => (
-                  <div key={agent.id} className="flex flex-col items-start justify-between gap-2 group cursor-pointer sm:flex-row sm:items-center" onClick={() => setSelectedAgentId(agent.id)}>
+                  <div key={agent.id} className="group flex cursor-pointer flex-col items-start justify-between gap-2 sm:flex-row sm:items-center" onClick={() => setSelectedAgentId(agent.id)}>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-rose-500/5 flex items-center justify-center text-xs font-bold border border-rose-500/10 group-hover:border-rose-500/50 transition-colors">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-500/10 bg-rose-500/5 text-xs font-bold transition-colors group-hover:border-rose-500/50">
                         {agent.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white/60 group-hover:text-rose-400 transition-colors">{agent.name}</p>
+                        <p className="text-xs font-bold text-white/60 transition-colors group-hover:text-rose-400">{agent.name}</p>
                         <p className="text-[10px] text-white/20">{agent.strategyType}</p>
                       </div>
                     </div>
@@ -880,202 +838,188 @@ export default function App() {
             </div>
           )}
 
-          {/* Selected Agent Details */}
           <AnimatePresence mode="wait">
             {selectedAgent ? (
-              <motion.div 
+              <motion.div
                 key={selectedAgent.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
-                className="bg-[#111] border border-emerald-500/30 rounded-2xl p-4 shadow-[0_0_50px_rgba(16,185,129,0.1)] sm:p-6"
+                className="rounded-2xl border border-emerald-500/30 bg-[#111] p-4 shadow-[0_0_50px_rgba(16,185,129,0.1)] sm:p-6"
               >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-emerald-500 flex items-center gap-2">
-                    <Cpu className="w-4 h-4" /> 代理智能
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-emerald-500">
+                    <Cpu className="w-4 h-4" /> {display.agentDetailTitle}
                   </h2>
-                  <button onClick={() => setSelectedAgentId(null)} className="text-white/20 hover:text-white transition-colors">
+                  <button onClick={() => setSelectedAgentId(null)} className="text-white/20 transition-colors hover:text-white">
                     <RefreshCw className="w-4 h-4" />
                   </button>
                 </div>
 
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: selectedAgent.color }} />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10">
+                      <div className="h-6 w-6 rounded-full" style={{ backgroundColor: selectedAgent.color }} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-white leading-tight">{selectedAgent.name}</h3>
-                      <p className="text-xs text-white/40 font-mono italic">{selectedAgent.strategy}</p>
+                      <h3 className="text-lg font-bold leading-tight text-white">{selectedAgent.name}</h3>
+                      <p className="text-xs font-mono italic text-white/40">{selectedAgent.strategy}</p>
                     </div>
                   </div>
 
-                  <div className="bg-black/40 rounded-xl p-4 border border-white/5 space-y-4">
+                  <div className="space-y-4 rounded-xl border border-white/5 bg-black/40 p-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] uppercase text-white/30 font-bold">活躍持倉</p>
-                      <p className="text-[10px] uppercase text-white/30 font-bold">浮動盈虧: 
-                        <span className={cn(
-                          "ml-2 font-mono",
-                          selectedAgent.unrealizedPL >= 0 ? "text-emerald-400" : "text-rose-400"
-                        )}>
+                      <p className="text-[10px] font-bold uppercase text-white/30">{display.openPositions}</p>
+                      <p className="text-[10px] font-bold uppercase text-white/30">
+                        {display.currentUnrealized}:
+                        <span className={cn('ml-2 font-mono', selectedAgent.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                           {selectedAgent.unrealizedPL >= 0 ? '+' : ''}${selectedAgent.unrealizedPL.toFixed(2)}
                         </span>
                       </p>
                     </div>
-                    
+
                     <div className="space-y-2">
                       {Object.values(selectedAgent.activePositions).length > 0 ? (
                         Object.values(selectedAgent.activePositions).map((pos: Position) => (
-                          <div key={pos.symbol} className="flex flex-col gap-3 bg-white/5 rounded-lg p-2 border border-white/5 sm:flex-row sm:items-center sm:justify-between">
+                          <div key={pos.symbol} className="flex flex-col gap-3 rounded-lg border border-white/5 bg-white/5 p-2 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                              <div className="flex items-center gap-2 flex-wrap">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <p className="text-xs font-bold text-white">{pos.symbol}</p>
                                 <span className={cn(
-                                  "px-1 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest border",
+                                  'rounded border px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest',
                                   pos.side === 'SHORT'
-                                    ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                                    : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    ? 'border-rose-500/20 bg-rose-500/10 text-rose-400'
+                                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
                                 )}>
-                                  {pos.side === 'SHORT' ? 'SHORT' : 'LONG'}
+                                  {pos.side}
                                 </span>
-                                <span className="px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[8px] font-bold uppercase tracking-widest">
-                                  {pos.leverage}x 槓桿
+                                <span className="rounded bg-emerald-500/10 px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-500">
+                                  {pos.leverage}x {display.leverageLabel}
                                 </span>
                               </div>
-                              <p className="text-[10px] text-white/40">
-                                {pos.amount.toFixed(4)} 單位 @ ${pos.avgEntryPrice.toLocaleString()}
-                              </p>
-                              <p className="text-[9px] text-white/20 uppercase font-bold mt-1">
-                                實際價值: ${(pos.amount * pos.avgEntryPrice / pos.leverage).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD {pos.leverage}x
+                              <p className="text-[10px] text-white/40">{display.quantityLabel} {pos.amount.toFixed(4)} @ ${pos.avgEntryPrice.toLocaleString(locale)}</p>
+                              <p className="mt-1 text-[9px] font-bold uppercase text-white/20">
+                                {display.marginLabel} ${(pos.amount * pos.avgEntryPrice / pos.leverage).toLocaleString(locale, { maximumFractionDigits: 2 })} USD {pos.leverage}x
                               </p>
                             </div>
                             <div className="text-left sm:text-right">
-                              <p className="text-xs font-mono text-emerald-400">${(prices[pos.symbol] || 0).toLocaleString()}</p>
-                              <p className={cn(
-                                "text-[10px] font-mono",
-                                pos.unrealizedPL >= 0 ? "text-emerald-400" : "text-rose-400"
-                              )}>
+                              <p className="text-xs font-mono text-emerald-400">${(prices[pos.symbol] || 0).toLocaleString(locale)}</p>
+                              <p className={cn('text-[10px] font-mono', pos.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                                 {pos.unrealizedPL >= 0 ? '+' : ''}${pos.unrealizedPL.toFixed(2)}
                               </p>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <p className="text-center py-4 text-[10px] text-white/20 italic">無活躍持倉</p>
+                        <p className="py-4 text-center text-[10px] italic text-white/20">{display.noOpenPositions}</p>
                       )}
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] uppercase text-white/30 font-bold flex items-center gap-2">
-                        <History className="w-3 h-3" /> 策略信號日誌
+                      <p className="flex items-center gap-2 text-[10px] font-bold uppercase text-white/30">
+                        <History className="w-3 h-3" /> {display.recentTrades}
                       </p>
-                      <span className="text-[8px] text-white/20 uppercase">最近 20 個事件</span>
+                      <span className="text-[8px] uppercase text-white/20">{display.recentTradesLimit}</span>
                     </div>
-                    
-                    <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+
+                    <div className="max-h-[350px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                       {selectedAgent.trades.length > 0 ? (
-                        selectedAgent.trades.map(trade => (
-                          <div key={trade.id} className="group/trade bg-black/40 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-all">
-                            <div className="flex flex-col items-start gap-2 mb-2 sm:flex-row sm:items-center sm:justify-between">
+                        selectedAgent.trades.slice(0, 20).map((trade) => (
+                          <div key={trade.id} className="group/trade rounded-xl border border-white/5 bg-black/40 p-3 transition-all hover:border-white/10">
+                            <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className={cn(
-                                  "text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider",
-                                  trade.type === 'BUY' ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+                                  'rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider',
+                                  trade.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
                                 )}>
                                   {trade.symbol} {trade.action} {trade.type} {trade.leverage && `${trade.leverage}x`}
                                 </span>
-                                <span className="text-xs font-mono text-white font-medium">${trade.price.toLocaleString()}</span>
+                                <span className="text-xs font-mono font-medium text-white">${trade.price.toLocaleString(locale)}</span>
                               </div>
-                              <span className="text-[10px] font-mono text-white/20">{new Date(trade.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                              <span className="text-[10px] font-mono text-white/20">
+                                {new Date(trade.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              </span>
                             </div>
                             <div className="flex items-start gap-2">
-                              <Info className="w-3 h-3 text-emerald-500/40 mt-0.5 shrink-0" />
-                              <p className="text-[11px] text-white/60 leading-relaxed italic">
-                                {trade.reason}
-                              </p>
+                              <Info className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500/40" />
+                              <p className="text-[11px] italic leading-relaxed text-white/60">{trade.reason}</p>
                             </div>
-                            <div className="mt-2 pt-2 border-t border-white/5 flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:justify-between sm:items-center">
+                            <div className="mt-2 flex flex-col items-start gap-2 border-t border-white/5 pt-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                               <div className="flex gap-3">
-                                <span className="text-[9px] text-white/30 uppercase font-bold">
-                                  實際價值: {(trade.amount * trade.price / (trade.leverage || 1)).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD {trade.leverage && `${trade.leverage}x`}
+                                <span className="text-[9px] font-bold uppercase text-white/30">
+                                  {display.marginLabel} {(trade.amount * trade.price / (trade.leverage || 1)).toLocaleString(locale, { maximumFractionDigits: 2 })} USD {trade.leverage && `${trade.leverage}x`}
                                 </span>
-                                <span className="text-[9px] text-white/30 uppercase font-bold">手續費: ${trade.fee.toFixed(4)}</span>
+                                <span className="text-[9px] font-bold uppercase text-white/30">{display.feeLabel} ${trade.fee.toFixed(4)}</span>
                                 {trade.realizedPL !== undefined && (
-                                  <span className={cn(
-                                    "text-[9px] uppercase font-bold",
-                                    trade.realizedPL >= 0 ? "text-emerald-500" : "text-rose-500"
-                                  )}>
-                                    盈虧: ${trade.realizedPL.toFixed(4)}
+                                  <span className={cn('text-[9px] font-bold uppercase', trade.realizedPL >= 0 ? 'text-emerald-500' : 'text-rose-500')}>
+                                    {display.realizedPnlLabel}: ${trade.realizedPL.toFixed(4)}
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[9px] text-white/10 uppercase font-bold">ID: {trade.id}</span>
+                              <span className="text-[9px] font-bold uppercase text-white/10">ID: {trade.id}</span>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <div className="text-center py-12 space-y-3">
-                          <Activity className="w-8 h-8 text-white/5 mx-auto" />
-                          <p className="text-[10px] text-white/20 italic">等待第一個策略信號...</p>
+                        <div className="space-y-3 py-12 text-center">
+                          <Activity className="mx-auto h-8 w-8 text-white/5" />
+                          <p className="text-[10px] italic text-white/20">{display.noTrades}</p>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-white/5">
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-[10px] uppercase text-white/30 font-bold">策略概況</p>
-                      <span className="px-2 py-0.5 bg-white/5 rounded text-[9px] font-mono text-white/40">{selectedAgent.strategyType}</span>
+                  <div className="border-t border-white/5 pt-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase text-white/30">{display.strategyOverview}</p>
+                      <span className="rounded bg-white/5 px-2 py-0.5 text-[9px] font-mono text-white/40">{selectedAgent.strategyType}</span>
                     </div>
-                    <p className="text-[11px] text-white/50 leading-relaxed">
-                      該代理採用 <span className="text-emerald-500">{selectedAgent.strategyType}</span> 模型，
-                      處理實時市場波動以執行交易。當前效率評分：
-                      <span className="text-white ml-1">{(0.85 + Math.random() * 0.1).toFixed(2)}</span>
+                    <p className="text-[11px] leading-relaxed text-white/50">
+                      {display.strategyConfidenceText} <span className="text-emerald-500">{selectedAgent.strategyType}</span> {display.strategyConfidenceSuffix}
+                      <span className="ml-1 text-white">{(0.85 + Math.random() * 0.1).toFixed(2)}</span>
                     </p>
                   </div>
                 </div>
               </motion.div>
             ) : (
-              <div className="bg-[#111] border border-white/5 rounded-2xl p-8 text-center space-y-4 sm:p-12">
-                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto">
-                  <Activity className="w-8 h-8 text-white/10" />
+              <div className="rounded-2xl border border-white/5 bg-[#111] p-8 text-center space-y-4 sm:p-12">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+                  <Activity className="h-8 w-8 text-white/10" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest">未選擇代理</h3>
-                  <p className="text-xs text-white/20 mt-2">從艦隊中選擇一個代理，或使用上方的 AI 選擇器來分析特定的策略日誌。</p>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-white/40">{display.emptySelectionTitle}</h3>
+                  <p className="mt-2 text-xs text-white/20">{display.emptySelectionBody}</p>
                 </div>
               </div>
             )}
           </AnimatePresence>
 
-          {/* System Logs */}
-          <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-white/60 mb-4">系統日誌</h2>
+          <div className="rounded-2xl border border-white/5 bg-[#111] p-6">
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-white/60">{display.systemLogs}</h2>
             <div className="space-y-2 font-mono text-[10px]">
               <div className="flex gap-2 text-emerald-500/60">
                 <span>[16:35:44]</span>
-                <span>系統：所有 100 個代理已同步。</span>
+                <span>{display.logs[0]}</span>
               </div>
               <div className="flex gap-2 text-white/30">
                 <span>[16:35:42]</span>
-                <span>網絡：延遲穩定在 1.2ms。</span>
+                <span>{display.logs[1]}</span>
               </div>
               <div className="flex gap-2 text-white/30">
                 <span>[16:35:40]</span>
-                <span>市場：已通過 WebSocket 建立價格推送。</span>
+                <span>{display.logs[2]}</span>
               </div>
               <div className="flex gap-2 text-amber-500/60">
                 <span>[16:35:38]</span>
-                <span>警告：在第 7 區檢測到高波動。</span>
+                <span>{display.logs[3]}</span>
               </div>
             </div>
           </div>
         </div>
       </main>
       )}
-
       {/* Footer */}
       <footer className="max-w-[1600px] mx-auto px-6 py-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
         <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">{ui.footerCopyright}</p>
