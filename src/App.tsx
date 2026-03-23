@@ -30,6 +30,7 @@ import LearningAgentDetail from './pages/LearningAgentDetail';
 
 const AGENT_COUNT = 100;
 const AGENTS_STORAGE_KEY = 'agentsState:v2';
+const DEVICE_ID_STORAGE_KEY = 'agentsDeviceId:v1';
 
 type SavedAgentsState = {
   savedAt: number;
@@ -55,11 +56,25 @@ const parseSavedState = (raw: string | null): SavedAgentsState | null => {
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [deviceId] = useState(() => {
+    try {
+      const existing = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
+      if (existing) return existing;
+      const next = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `device-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(DEVICE_ID_STORAGE_KEY, next);
+      return next;
+    } catch {
+      return `device-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+  });
   const [agents, setAgents] = useState<Agent[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [isPaused, setIsPaused] = useState(false);
   const [isStarted, setIsStarted] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isLeader, setIsLeader] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
@@ -79,6 +94,12 @@ export default function App() {
   
   const pricesRef = useRef<Record<string, number>>({});
   const historyMapRef = useRef<Record<string, number[]>>({});
+  const latestSavedAtRef = useRef(0);
+
+  const applySavedAgents = (nextAgents: Agent[], savedAt: number) => {
+    latestSavedAtRef.current = savedAt;
+    setAgents(nextAgents);
+  };
 
   // Initialize agents and market history
   useEffect(() => {
@@ -94,11 +115,13 @@ export default function App() {
       setPrices(allPrices);
 
       let resolvedAgents: Agent[] | null = null;
+      let resolvedSavedAt = 0;
 
       // Prefer local browser state so refresh does not wipe active trades.
       const localState = parseSavedState(localStorage.getItem(AGENTS_STORAGE_KEY));
       if (localState) {
         resolvedAgents = localState.agents;
+        resolvedSavedAt = localState.savedAt;
       }
 
       // Then try backend state as a cross-device/shared fallback.
@@ -113,20 +136,24 @@ export default function App() {
         if (serverState && serverState.agents.length === AGENT_COUNT) {
           if (!localState || serverState.savedAt > localState.savedAt) {
             resolvedAgents = serverState.agents;
+            resolvedSavedAt = serverState.savedAt;
           }
         } else if (!resolvedAgents) {
           // Initialize agents with random symbols from Bybit
           resolvedAgents = generateAgents(AGENT_COUNT, symbols);
+          resolvedSavedAt = Date.now();
         }
       } catch (error) {
         console.error("Failed to fetch agents state:", error);
         if (!resolvedAgents) {
           resolvedAgents = generateAgents(AGENT_COUNT, symbols);
+          resolvedSavedAt = Date.now();
         }
       }
 
       if (!resolvedAgents) {
         resolvedAgents = generateAgents(AGENT_COUNT, symbols);
+        resolvedSavedAt = Date.now();
       }
 
       // Initialize history for each symbol
@@ -138,7 +165,7 @@ export default function App() {
       historyMapRef.current = newHistoryMap;
 
       if (cancelled) return;
-      setAgents(resolvedAgents);
+      applySavedAgents(resolvedAgents, resolvedSavedAt);
       setIsHydrated(true);
     };
 
@@ -153,11 +180,17 @@ export default function App() {
   useEffect(() => {
     if (!isHydrated || agents.length !== AGENT_COUNT) return;
 
-    const snapshot: SavedAgentsState = { savedAt: Date.now(), agents };
+    const savedAt = isLeader ? Date.now() : (latestSavedAtRef.current || Date.now());
+    latestSavedAtRef.current = savedAt;
+    const snapshot: SavedAgentsState = { savedAt, agents };
     try {
       localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify(snapshot));
     } catch (error) {
       console.warn('local agent state write failed', error);
+    }
+
+    if (!isLeader) {
+      return;
     }
 
     const saveTimer = window.setTimeout(async () => {
@@ -174,11 +207,91 @@ export default function App() {
     }, 1000);
 
     return () => window.clearTimeout(saveTimer);
-  }, [agents, isHydrated]);
+  }, [agents, isHydrated, isLeader]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    let cancelled = false;
+
+    const heartbeat = async () => {
+      try {
+        const response = await fetch("/api/leader", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ holderId: deviceId }),
+        });
+        const data = await response.json();
+        if (!cancelled) {
+          setIsLeader(Boolean(data?.leader));
+        }
+      } catch (error) {
+        console.error("Failed to update leader lock:", error);
+        if (!cancelled) {
+          setIsLeader(false);
+        }
+      }
+    };
+
+    heartbeat();
+    const interval = window.setInterval(heartbeat, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [deviceId, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    let cancelled = false;
+
+    const syncFromServer = async () => {
+      try {
+        const response = await fetch("/api/agents");
+        const savedAgents = await response.json();
+        if (cancelled) return;
+        const serverState: SavedAgentsState | null = Array.isArray(savedAgents)
+          ? { savedAt: 0, agents: savedAgents }
+          : (savedAgents && Array.isArray(savedAgents.agents) ? { savedAt: Number(savedAgents.savedAt) || 0, agents: savedAgents.agents } : null);
+
+        if (serverState && serverState.agents.length === AGENT_COUNT && serverState.savedAt > latestSavedAtRef.current) {
+          applySavedAgents(serverState.agents, serverState.savedAt);
+        }
+      } catch (error) {
+        console.error("Failed to sync agents state:", error);
+      }
+    };
+
+    if (!isLeader) {
+      syncFromServer();
+    }
+
+    const interval = window.setInterval(() => {
+      if (!isLeader) {
+        syncFromServer();
+      }
+    }, 6000);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && !isLeader) {
+        syncFromServer();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [isHydrated, isLeader]);
 
   // Simulation Loop
   useEffect(() => {
-    if (!isHydrated || isPaused || !isStarted) return;
+    if (!isHydrated || isPaused || !isStarted || !isLeader) return;
 
     const interval = setInterval(async () => {
       // 1. Update All Market Prices (Bybit API)
@@ -205,7 +318,7 @@ export default function App() {
     }, 5000); // 5s interval as requested
 
     return () => clearInterval(interval);
-  }, [isHydrated, isPaused, isStarted]);
+  }, [isHydrated, isPaused, isStarted, isLeader]);
 
   useEffect(() => {
     const formatDuration = (ms: number) => {
