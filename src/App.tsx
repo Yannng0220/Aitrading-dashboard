@@ -16,6 +16,7 @@ import {
   History,
   Info,
   AlertCircle,
+  ShieldAlert,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -207,7 +208,7 @@ export default function App() {
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
               <Zap className="w-5 h-5 text-black fill-current" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-white">AI NEXUS <span className="text-emerald-500 text-sm font-mono ml-2">v2.5</span></h1>
+            <h1 className="text-xl font-bold tracking-tight text-white">Yang-RotBot Trading</h1>
           </div>
 
           <div className="flex items-center gap-6">
@@ -284,6 +285,22 @@ export default function App() {
       </header>
 
       <main className="max-w-[1600px] mx-auto p-6 grid grid-cols-12 gap-6">
+        <div className="col-span-12 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.08)]">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-xl bg-amber-400/15 p-2 text-amber-300">
+              <ShieldAlert className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-bold tracking-wide text-amber-200">風險與免責聲明</p>
+              <p className="text-sm leading-relaxed text-amber-50/90">
+                本網站內容、模擬數據、代理策略、績效展示與任何訊號，均不構成投資建議、交易建議、財務建議或任何獲利保證，僅供產品展示、研究模擬與娛樂用途。
+              </p>
+              <p className="text-xs leading-relaxed text-amber-100/70">
+                請勿將本頁資訊視為真實下單依據；任何投資決策與風險，應由使用者自行判斷並自行承擔。
+              </p>
+            </div>
+          </div>
+        </div>
         
         {/* Left Column: Market Overview */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
