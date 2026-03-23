@@ -1,10 +1,18 @@
 import { useMemo, type ReactNode } from 'react';
-import { BrainCircuit, Lightbulb, TrendingDown, TrendingUp, TriangleAlert } from 'lucide-react';
+import { Bot, BrainCircuit, Lightbulb, TrendingDown, TrendingUp, TriangleAlert } from 'lucide-react';
 import { Agent, Trade } from '../types';
 import { cn } from '../lib/utils';
 
 type LearningProps = {
   agents: Agent[];
+};
+
+type ReviewedTrade = {
+  agentName: string;
+  strategyType: string;
+  trade: Trade & { realizedPL: number };
+  verdict: 'good' | 'warning';
+  note: string;
 };
 
 type StrategySummary = {
@@ -17,60 +25,114 @@ type StrategySummary = {
   recommendation: string;
 };
 
-type ReviewedTrade = {
-  agentName: string;
+type AgentAdvice = {
+  id: number;
+  name: string;
   strategyType: string;
-  trade: Trade;
-  verdict: 'good' | 'warning';
-  note: string;
+  closedTrades: number;
+  avgPnl: number;
+  winRate: number;
+  avgLeverage: number;
+  activePositions: number;
+  recommendation: string;
 };
 
-function getTradeReview(agent: Agent, trade: Trade): ReviewedTrade | null {
-  if (trade.action !== 'EXIT' || trade.realizedPL === undefined) {
-    return null;
-  }
-
+function reviewTrade(agent: Agent, trade: Trade & { realizedPL: number }): ReviewedTrade {
   const leverage = trade.leverage ?? 1;
   const isLoss = trade.realizedPL < 0;
   const isHighLeverageLoss = isLoss && leverage >= 10;
+
+  let note = '這筆平倉為正報酬，可先保留目前條件，觀察是否能持續複製。';
+  if (isHighLeverageLoss) {
+    note = '這筆虧損伴隨高槓桿，建議先降低槓桿上限，再觀察回撤是否收斂。';
+  } else if (isLoss) {
+    note = '這筆平倉為虧損，建議先收緊進場 threshold，避免太早進場。';
+  }
 
   return {
     agentName: agent.name,
     strategyType: agent.strategyType,
     trade,
-    verdict: isHighLeverageLoss || isLoss ? 'warning' : 'good',
-    note: isHighLeverageLoss
-      ? '高槓桿虧損，建議先降低槓桿上限或縮小單筆風險。'
-      : isLoss
-        ? '這筆平倉為虧損，建議檢查進場門檻是否太寬。'
-        : '這筆平倉為正報酬，可保留目前條件並觀察是否能複製。'
+    verdict: isLoss ? 'warning' : 'good',
+    note,
+  };
+}
+
+function buildAgentRecommendation(agent: Agent): AgentAdvice {
+  const closedTrades = agent.trades.filter(
+    (trade): trade is Trade & { realizedPL: number } =>
+      trade.action === 'EXIT' && typeof trade.realizedPL === 'number'
+  );
+
+  const wins = closedTrades.filter((trade) => trade.realizedPL >= 0).length;
+  const losses = closedTrades.length - wins;
+  const totalPnl = closedTrades.reduce((sum, trade) => sum + trade.realizedPL, 0);
+  const avgPnl = closedTrades.length > 0 ? totalPnl / closedTrades.length : 0;
+  const winRate = closedTrades.length > 0 ? (wins / closedTrades.length) * 100 : 0;
+  const avgLeverage =
+    closedTrades.length > 0
+      ? closedTrades.reduce((sum, trade) => sum + (trade.leverage ?? 1), 0) / closedTrades.length
+      : Object.values(agent.activePositions).reduce((sum, pos) => sum + pos.leverage, 0) / Math.max(Object.values(agent.activePositions).length, 1);
+
+  let recommendation = '先持續收集更多平倉紀錄，暫時不要直接動參數。';
+
+  if (closedTrades.length >= 3) {
+    if (winRate < 40) {
+      recommendation = '勝率偏低，建議提高 threshold，並把 riskTolerance 往下收。';
+    } else if (avgPnl < 0 && avgLeverage >= 8) {
+      recommendation = '平均盈虧為負且槓桿偏高，建議先下修槓桿上限。';
+    } else if (avgPnl < 0) {
+      recommendation = '平均盈虧為負，建議優先檢查停損是否過慢，或縮小單筆部位。';
+    } else if (winRate >= 55 && avgPnl > 0) {
+      recommendation = '近期表現穩定，可以先維持參數，只觀察是否出現回撤放大。';
+    } else {
+      recommendation = '表現中性，建議先微調停利停損，不要同時改太多參數。';
+    }
+  } else if (Object.keys(agent.activePositions).length > 1) {
+    recommendation = '目前同時持倉較多，建議先控制同時開倉數，再觀察波動。';
+  }
+
+  if (agent.performance < -5) {
+    recommendation = '近期回撤偏大，建議先降低 riskTolerance 與槓桿上限。';
+  }
+
+  return {
+    id: agent.id,
+    name: agent.name,
+    strategyType: agent.strategyType,
+    closedTrades: closedTrades.length,
+    avgPnl,
+    winRate,
+    avgLeverage: Number.isFinite(avgLeverage) ? avgLeverage : 1,
+    activePositions: Object.keys(agent.activePositions).length,
+    recommendation,
   };
 }
 
 export default function Learning({ agents }: LearningProps) {
   const analysis = useMemo(() => {
     const closedTrades = agents
-      .flatMap(agent => agent.trades.map(trade => ({ agent, trade })))
-      .filter((item): item is { agent: Agent; trade: Trade & { realizedPL: number } } =>
-        item.trade.action === 'EXIT' && typeof item.trade.realizedPL === 'number'
+      .flatMap((agent) =>
+        agent.trades
+          .filter((trade): trade is Trade & { realizedPL: number } => trade.action === 'EXIT' && typeof trade.realizedPL === 'number')
+          .map((trade) => ({ agent, trade }))
       )
       .sort((a, b) => b.trade.timestamp - a.trade.timestamp);
 
     const reviewedTrades = closedTrades
-      .map(({ agent, trade }) => getTradeReview(agent, trade))
-      .filter((item): item is ReviewedTrade => item !== null)
-      .slice(0, 20);
+      .slice(0, 20)
+      .map(({ agent, trade }) => reviewTrade(agent, trade));
 
-    const wins = closedTrades.filter(item => item.trade.realizedPL >= 0).length;
+    const wins = closedTrades.filter(({ trade }) => trade.realizedPL >= 0).length;
     const losses = closedTrades.length - wins;
-    const totalPnl = closedTrades.reduce((sum, item) => sum + item.trade.realizedPL, 0);
+    const totalPnl = closedTrades.reduce((sum, { trade }) => sum + trade.realizedPL, 0);
     const avgPnl = closedTrades.length > 0 ? totalPnl / closedTrades.length : 0;
     const winRate = closedTrades.length > 0 ? (wins / closedTrades.length) * 100 : 0;
-    const highLeverageLosses = closedTrades.filter(item => item.trade.realizedPL < 0 && (item.trade.leverage ?? 1) >= 10).length;
+    const highLeverageLosses = closedTrades.filter(({ trade }) => trade.realizedPL < 0 && (trade.leverage ?? 1) >= 10).length;
 
-    const byStrategy = new Map<string, { trades: number; wins: number; pnl: number; leverageTotal: number; losses: number }>();
+    const groupedByStrategy = new Map<string, { trades: number; wins: number; pnl: number; leverageTotal: number; losses: number }>();
     for (const { agent, trade } of closedTrades) {
-      const current = byStrategy.get(agent.strategyType) ?? { trades: 0, wins: 0, pnl: 0, leverageTotal: 0, losses: 0 };
+      const current = groupedByStrategy.get(agent.strategyType) ?? { trades: 0, wins: 0, pnl: 0, leverageTotal: 0, losses: 0 };
       current.trades += 1;
       current.pnl += trade.realizedPL;
       current.leverageTotal += trade.leverage ?? 1;
@@ -79,10 +141,10 @@ export default function Learning({ agents }: LearningProps) {
       } else {
         current.losses += 1;
       }
-      byStrategy.set(agent.strategyType, current);
+      groupedByStrategy.set(agent.strategyType, current);
     }
 
-    const strategySummaries: StrategySummary[] = Array.from(byStrategy.entries())
+    const strategySummaries: StrategySummary[] = Array.from(groupedByStrategy.entries())
       .map(([strategyType, stats]) => {
         const avgStrategyPnl = stats.trades > 0 ? stats.pnl / stats.trades : 0;
         const avgLeverage = stats.trades > 0 ? stats.leverageTotal / stats.trades : 1;
@@ -91,13 +153,13 @@ export default function Learning({ agents }: LearningProps) {
         let recommendation = '資料量還偏少，先持續收集更多平倉紀錄。';
         if (stats.trades >= 3) {
           if (strategyWinRate < 40) {
-            recommendation = '勝率偏低，建議提高進場 threshold，並收緊 riskTolerance。';
+            recommendation = '這組策略勝率偏低，建議提高進場門檻並收緊 riskTolerance。';
           } else if (avgStrategyPnl < 0 && avgLeverage >= 8) {
-            recommendation = '平均盈虧為負且槓桿偏高，建議先壓低槓桿上限。';
+            recommendation = '平均盈虧為負且槓桿偏高，建議先下修槓桿上限。';
           } else if (strategyWinRate >= 55 && avgStrategyPnl > 0) {
-            recommendation = '近期表現穩定，可先維持策略設定，只監控回撤。';
+            recommendation = '近期表現穩定，可先維持目前設定，持續觀察回撤。';
           } else {
-            recommendation = '策略表現中性，建議優先檢查停損與出場條件是否過慢。';
+            recommendation = '建議先微調停損與停利，不要一次調整太多條件。';
           }
         }
 
@@ -112,6 +174,13 @@ export default function Learning({ agents }: LearningProps) {
         };
       })
       .sort((a, b) => b.closedTrades - a.closedTrades);
+
+    const agentAdvice = agents
+      .map(buildAgentRecommendation)
+      .sort((a, b) => {
+        if (b.closedTrades !== a.closedTrades) return b.closedTrades - a.closedTrades;
+        return b.avgPnl - a.avgPnl;
+      });
 
     const suggestions: string[] = [];
     if (closedTrades.length === 0) {
@@ -140,6 +209,7 @@ export default function Learning({ agents }: LearningProps) {
       highLeverageLosses,
       reviewedTrades,
       strategySummaries,
+      agentAdvice,
       suggestions,
     };
   }, [agents]);
@@ -157,7 +227,7 @@ export default function Learning({ agents }: LearningProps) {
               這一頁只做交易後檢討、回測方向與參數建議，不會自動改你的策略或幫你下單。
             </p>
             <p className="text-xs leading-relaxed text-sky-100/70">
-              建議先觀察至少數十筆完整平倉紀錄，再把有效的調整手動套回策略參數。
+              每個 AI 都會有自己的建議，你可以先觀察，再手動把有效調整套回策略。
             </p>
           </div>
         </div>
@@ -194,7 +264,7 @@ export default function Learning({ agents }: LearningProps) {
               <p className="mt-2 text-2xl font-bold text-rose-400">{analysis.losses}</p>
             </div>
             <div className="rounded-xl border border-white/5 bg-black/30 p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">目前代理數</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">代理數量</p>
               <p className="mt-2 text-2xl font-bold text-white">{agents.length}</p>
             </div>
           </div>
@@ -251,6 +321,42 @@ export default function Learning({ agents }: LearningProps) {
 
       <section className="rounded-2xl border border-white/5 bg-[#111] p-4 shadow-2xl sm:p-6">
         <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+          <Bot className="h-4 w-4 text-emerald-400" />
+          每個 AI 的調參建議
+        </div>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {analysis.agentAdvice.map((item) => (
+            <div key={item.id} className="rounded-xl border border-white/5 bg-black/30 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-white">{item.name}</p>
+                  <p className="mt-1 text-[11px] text-white/40">{item.strategyType}</p>
+                </div>
+                <div className="text-left sm:text-right">
+                  <p className={cn(
+                    'text-sm font-mono font-bold',
+                    item.avgPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  )}>
+                    {item.avgPnl >= 0 ? '+' : ''}${item.avgPnl.toFixed(2)}
+                  </p>
+                  <p className="text-[11px] text-white/35">{item.closedTrades} 筆平倉</p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <SmallStat label="勝率" value={`${item.winRate.toFixed(0)}%`} />
+                <SmallStat label="均槓桿" value={`${item.avgLeverage.toFixed(1)}x`} />
+                <SmallStat label="持倉" value={item.activePositions} />
+              </div>
+
+              <p className="mt-4 text-sm leading-relaxed text-white/70">{item.recommendation}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/5 bg-[#111] p-4 shadow-2xl sm:p-6">
+        <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
           <BrainCircuit className="h-4 w-4 text-emerald-400" />
           策略群組建議
         </div>
@@ -280,7 +386,7 @@ export default function Learning({ agents }: LearningProps) {
             ))
           ) : (
             <div className="rounded-xl border border-white/5 bg-black/30 p-6 text-sm text-white/40">
-              尚未收集到足夠的策略平倉資料，因此還沒有策略群組建議。
+              目前還沒有足夠的策略群組平倉資料，因此暫時沒有群組級建議。
             </div>
           )}
         </div>
@@ -318,6 +424,15 @@ function MetricCard({
       </div>
       <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">{label}</p>
       <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+    </div>
+  );
+}
+
+function SmallStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/5 p-2">
+      <p className="text-[9px] font-bold uppercase tracking-widest text-white/30">{label}</p>
+      <p className="mt-1 text-sm font-mono text-white">{value}</p>
     </div>
   );
 }

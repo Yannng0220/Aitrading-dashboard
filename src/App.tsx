@@ -256,38 +256,37 @@ export default function App() {
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
               <Zap className="w-5 h-5 text-black fill-current" />
             </div>
-            <div className="space-y-1">
-              <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl">Yang-RotBot Trading</h1>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => navigate('/')}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors',
-                    currentPage === 'dashboard'
-                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                      : 'border-white/10 bg-white/5 text-white/50 hover:text-white'
-                  )}
-                >
-                  <LayoutDashboard className="h-3.5 w-3.5" />
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => navigate('/learning')}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors',
-                    currentPage === 'learning'
-                      ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
-                      : 'border-white/10 bg-white/5 text-white/50 hover:text-white'
-                  )}
-                >
-                  <BrainCircuit className="h-3.5 w-3.5" />
-                  Learning
-                </button>
-              </div>
-            </div>
+            <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl">Yang-RotBot Trading</h1>
           </div>
 
           <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:flex-nowrap md:gap-6">
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1 order-first w-full md:order-none md:w-auto">
+              <button
+                onClick={() => navigate('/')}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                  currentPage === 'dashboard'
+                    ? 'bg-emerald-500/10 text-emerald-400'
+                    : 'text-white/50 hover:text-white'
+                )}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Dashboard
+              </button>
+              <button
+                onClick={() => navigate('/learning')}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                  currentPage === 'learning'
+                    ? 'bg-sky-500/10 text-sky-300'
+                    : 'text-white/50 hover:text-white'
+                )}
+              >
+                <BrainCircuit className="h-3.5 w-3.5" />
+                Learning
+              </button>
+            </div>
+
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-[10px] font-bold tracking-widest uppercase">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Live Market Engine
