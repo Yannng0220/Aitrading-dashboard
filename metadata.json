@@ -1,0 +1,5 @@
+{
+  "name": "AI Trading Nexus",
+  "description": "A simulation of 100 unique AI agents competing in a high-frequency trading environment with diverse strategies.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,8 @@
+name = "ai-trading-nexus"
+compatibility_date = "2026-03-23"
+pages_build_output_dir = "dist"
+
+[[kv_namespaces]]
+binding = "AGENTS_STATE"
+id = "replace-with-your-cloudflare-kv-id"
+preview_id = "replace-with-your-cloudflare-kv-preview-id"
