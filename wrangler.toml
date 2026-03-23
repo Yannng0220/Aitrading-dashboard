@@ -4,5 +4,5 @@ pages_build_output_dir = "dist"
 
 [[kv_namespaces]]
 binding = "AGENTS_STATE"
-id = "replace-with-your-cloudflare-kv-id"
-preview_id = "replace-with-your-cloudflare-kv-preview-id"
+id = "2b2de6ee3b204bb4a4a7b3586cdf66bb"
+preview_id = "16e5d2f6abd343b8a07366b19e8e01de"
