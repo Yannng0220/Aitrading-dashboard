@@ -52,6 +52,7 @@ export default function App() {
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [isPaused, setIsPaused] = useState(false);
   const [isStarted, setIsStarted] = useState(true);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
@@ -74,42 +75,51 @@ export default function App() {
 
   // Initialize agents and market history
   useEffect(() => {
+    let cancelled = false;
+
     const initMarket = async () => {
       const allPrices = await fetchAllBybitTickers();
       const symbols = Object.keys(allPrices);
+
+      if (cancelled) return;
       
       pricesRef.current = allPrices;
       setPrices(allPrices);
 
+      let resolvedAgents: Agent[] | null = null;
+
       // Prefer local browser state so refresh does not wipe active trades.
       const localState = parseSavedState(localStorage.getItem(AGENTS_STORAGE_KEY));
       if (localState) {
-        setAgents(localState.agents);
+        resolvedAgents = localState.agents;
       }
 
       // Then try backend state as a cross-device/shared fallback.
       try {
         const response = await fetch("/api/agents");
         const savedAgents = await response.json();
+        if (cancelled) return;
         const serverState: SavedAgentsState | null = Array.isArray(savedAgents)
           ? { savedAt: 0, agents: savedAgents }
           : (savedAgents && Array.isArray(savedAgents.agents) ? { savedAt: Number(savedAgents.savedAt) || 0, agents: savedAgents.agents } : null);
 
         if (serverState && serverState.agents.length === AGENT_COUNT) {
           if (!localState || serverState.savedAt > localState.savedAt) {
-            setAgents(serverState.agents);
+            resolvedAgents = serverState.agents;
           }
-        } else if (!localState) {
+        } else if (!resolvedAgents) {
           // Initialize agents with random symbols from Bybit
-          const initialAgents = generateAgents(AGENT_COUNT, symbols);
-          setAgents(initialAgents);
+          resolvedAgents = generateAgents(AGENT_COUNT, symbols);
         }
       } catch (error) {
         console.error("Failed to fetch agents state:", error);
-        if (!localState) {
-          const initialAgents = generateAgents(AGENT_COUNT, symbols);
-          setAgents(initialAgents);
+        if (!resolvedAgents) {
+          resolvedAgents = generateAgents(AGENT_COUNT, symbols);
         }
+      }
+
+      if (!resolvedAgents) {
+        resolvedAgents = generateAgents(AGENT_COUNT, symbols);
       }
 
       // Initialize history for each symbol
@@ -119,14 +129,22 @@ export default function App() {
         newHistoryMap[s] = Array.from({ length: 20 }, () => basePrice + (Math.random() - 0.5) * (basePrice * 0.005));
       });
       historyMapRef.current = newHistoryMap;
+
+      if (cancelled) return;
+      setAgents(resolvedAgents);
+      setIsHydrated(true);
     };
 
     initMarket();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Persist state quickly so a refresh does not reset the simulation.
   useEffect(() => {
-    if (agents.length === 0) return;
+    if (!isHydrated || agents.length !== AGENT_COUNT) return;
 
     const snapshot: SavedAgentsState = { savedAt: Date.now(), agents };
     try {
@@ -149,11 +167,11 @@ export default function App() {
     }, 1000);
 
     return () => window.clearTimeout(saveTimer);
-  }, [agents]);
+  }, [agents, isHydrated]);
 
   // Simulation Loop
   useEffect(() => {
-    if (isPaused || !isStarted) return;
+    if (!isHydrated || isPaused || !isStarted) return;
 
     const interval = setInterval(async () => {
       // 1. Update All Market Prices (Bybit API)
@@ -180,7 +198,7 @@ export default function App() {
     }, 5000); // 5s interval as requested
 
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, [isHydrated, isPaused, isStarted]);
 
   useEffect(() => {
     const formatDuration = (ms: number) => {
@@ -215,7 +233,7 @@ export default function App() {
       .sort((a, b) => b.performance - a.performance);
   }, [agents, searchTerm]);
 
-  const topPerformers = agents.sort((a, b) => b.performance - a.performance).slice(0, 5);
+  const topPerformers = agents.slice().sort((a, b) => b.performance - a.performance).slice(0, 5);
   const liquidatedAgents = agents.filter(a => a.equity <= 0).sort((a, b) => b.performance - a.performance);
   const totalEquity = agents.reduce((sum, a) => sum + a.equity, 0);
   const avgPerformance = agents.reduce((sum, a) => sum + a.performance, 0) / AGENT_COUNT;
