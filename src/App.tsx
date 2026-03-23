@@ -74,6 +74,7 @@ export default function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [isStarted, setIsStarted] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [engineMode, setEngineMode] = useState(false);
   const [isLeader, setIsLeader] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
@@ -129,6 +130,8 @@ export default function App() {
         const response = await fetch("/api/agents");
         const savedAgents = await response.json();
         if (cancelled) return;
+        const serverEngineMode = Boolean(savedAgents?.engineMode);
+        setEngineMode(serverEngineMode);
         const serverState: SavedAgentsState | null = Array.isArray(savedAgents)
           ? { savedAt: 0, agents: savedAgents }
           : (savedAgents && Array.isArray(savedAgents.agents) ? { savedAt: Number(savedAgents.savedAt) || 0, agents: savedAgents.agents } : null);
@@ -137,6 +140,13 @@ export default function App() {
           if (!localState || serverState.savedAt > localState.savedAt) {
             resolvedAgents = serverState.agents;
             resolvedSavedAt = serverState.savedAt;
+          }
+          if (savedAgents && typeof savedAgents.startedAt === 'number' && savedAgents.startedAt > 0) {
+            setStartedAt(savedAgents.startedAt);
+          }
+          if (savedAgents && savedAgents.prices && typeof savedAgents.prices === 'object') {
+            pricesRef.current = savedAgents.prices;
+            setPrices(savedAgents.prices);
           }
         } else if (!resolvedAgents) {
           // Initialize agents with random symbols from Bybit
@@ -178,6 +188,7 @@ export default function App() {
 
   // Persist state quickly so a refresh does not reset the simulation.
   useEffect(() => {
+    if (engineMode) return;
     if (!isHydrated || agents.length !== AGENT_COUNT) return;
 
     const savedAt = isLeader ? Date.now() : (latestSavedAtRef.current || Date.now());
@@ -207,10 +218,13 @@ export default function App() {
     }, 1000);
 
     return () => window.clearTimeout(saveTimer);
-  }, [agents, isHydrated, isLeader]);
+  }, [agents, isHydrated, isLeader, engineMode]);
 
   useEffect(() => {
-    if (!isHydrated) return;
+    if (engineMode || !isHydrated) {
+      setIsLeader(false);
+      return;
+    }
 
     let cancelled = false;
 
@@ -252,6 +266,9 @@ export default function App() {
         const response = await fetch("/api/agents");
         const savedAgents = await response.json();
         if (cancelled) return;
+        if (typeof savedAgents?.engineMode === 'boolean') {
+          setEngineMode(savedAgents.engineMode);
+        }
         const serverState: SavedAgentsState | null = Array.isArray(savedAgents)
           ? { savedAt: 0, agents: savedAgents }
           : (savedAgents && Array.isArray(savedAgents.agents) ? { savedAt: Number(savedAgents.savedAt) || 0, agents: savedAgents.agents } : null);
@@ -259,23 +276,30 @@ export default function App() {
         if (serverState && serverState.agents.length === AGENT_COUNT && serverState.savedAt > latestSavedAtRef.current) {
           applySavedAgents(serverState.agents, serverState.savedAt);
         }
+        if (savedAgents && typeof savedAgents.startedAt === 'number' && savedAgents.startedAt > 0) {
+          setStartedAt(savedAgents.startedAt);
+        }
+        if (savedAgents && savedAgents.prices && typeof savedAgents.prices === 'object') {
+          pricesRef.current = savedAgents.prices;
+          setPrices(savedAgents.prices);
+        }
       } catch (error) {
         console.error("Failed to sync agents state:", error);
       }
     };
 
-    if (!isLeader) {
+    if (engineMode || !isLeader) {
       syncFromServer();
     }
 
     const interval = window.setInterval(() => {
-      if (!isLeader) {
+      if (engineMode || !isLeader) {
         syncFromServer();
       }
     }, 6000);
 
     const onVisible = () => {
-      if (document.visibilityState === 'visible' && !isLeader) {
+      if (document.visibilityState === 'visible' && (engineMode || !isLeader)) {
         syncFromServer();
       }
     };
@@ -287,10 +311,11 @@ export default function App() {
       window.clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [isHydrated, isLeader]);
+  }, [isHydrated, isLeader, engineMode]);
 
   // Simulation Loop
   useEffect(() => {
+    if (engineMode) return;
     if (!isHydrated || isPaused || !isStarted || !isLeader) return;
 
     const interval = setInterval(async () => {
@@ -318,7 +343,7 @@ export default function App() {
     }, 5000); // 5s interval as requested
 
     return () => clearInterval(interval);
-  }, [isHydrated, isPaused, isStarted, isLeader]);
+  }, [isHydrated, isPaused, isStarted, isLeader, engineMode]);
 
   useEffect(() => {
     const formatDuration = (ms: number) => {

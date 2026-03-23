@@ -7,6 +7,7 @@
     "dev": "vite",
     "cf:dev": "wrangler pages dev dist --compatibility-date=2026-03-23 --kv AGENTS_STATE",
     "cf:deploy": "wrangler pages deploy dist",
+    "cf:deploy:engine": "wrangler deploy -c engine-worker/wrangler.toml",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "powershell -Command \"if (Test-Path dist) { Remove-Item dist -Recurse -Force }\"",

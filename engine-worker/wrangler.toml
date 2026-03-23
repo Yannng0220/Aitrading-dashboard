@@ -1,0 +1,11 @@
+name = "ai-trading-engine"
+main = "src/index.ts"
+compatibility_date = "2026-03-23"
+
+[[durable_objects.bindings]]
+name = "TRADING_ENGINE"
+class_name = "TradingEngine"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TradingEngine"]
