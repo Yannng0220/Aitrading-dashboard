@@ -386,6 +386,10 @@ export default function App() {
   const learningAgentId = learningAgentMatch ? Number(learningAgentMatch[1]) : null;
   const currentPage = learningAgentId !== null
     ? 'learning-agent'
+    : location.pathname === '/about'
+      ? 'about'
+      : location.pathname === '/privacy'
+        ? 'privacy'
     : location.pathname === '/learning'
       ? 'learning'
       : 'dashboard';
@@ -509,6 +513,44 @@ export default function App() {
         <Learning agents={agents} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} />
       ) : currentPage === 'learning-agent' ? (
         <LearningAgentDetail agent={selectedLearningAgent} onBack={() => navigate('/learning')} />
+      ) : currentPage === 'about' ? (
+        <StaticPage
+          title="About Yang-RotBot Trading"
+          description="Yang-RotBot Trading is a browser-based trading simulation dashboard built to demonstrate multi-agent strategy behavior, interface design, and educational market analysis."
+          sections={[
+            {
+              heading: 'Purpose of the site',
+              body: 'This website presents simulated agents, portfolio changes, strategy logs, and learning suggestions so visitors can understand how trading rules behave over time in a controlled environment.',
+            },
+            {
+              heading: 'Nature of the information',
+              body: 'All data, performance results, and strategy insights shown on this site are part of a simulation. They do not constitute investment advice, trading advice, or any guarantee of real-world financial results.',
+            },
+            {
+              heading: 'Publisher content',
+              body: 'This page exists to clearly explain the product, the simulation scope, and the educational purpose of the dashboard so that visitors can understand what the site is about beyond the live interface.',
+            },
+          ]}
+        />
+      ) : currentPage === 'privacy' ? (
+        <StaticPage
+          title="Privacy Policy"
+          description="This website may store limited browser data and process operational requests needed to render the dashboard, maintain synchronization, and deliver server-side features."
+          sections={[
+            {
+              heading: 'Browser storage',
+              body: 'The site may store local identifiers, interface state, and simulation snapshots in browser storage so pages can recover correctly after refresh and maintain cross-session continuity.',
+            },
+            {
+              heading: 'Cloudflare processing',
+              body: 'Requests may be handled by Cloudflare Pages, Workers, Durable Objects, KV, and related logging services for routing, synchronization, reliability, and performance.',
+            },
+            {
+              heading: 'Advertising and third parties',
+              body: 'If advertising or analytics services are enabled, those providers may apply their own policies and data handling practices. The site owner should disclose any active third-party services accordingly.',
+            },
+          ]}
+        />
       ) : (
       <main className="max-w-[1600px] mx-auto p-4 grid grid-cols-12 gap-4 sm:p-6 sm:gap-6">
         <div className="col-span-12 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.08)] sm:px-5">
@@ -942,9 +984,9 @@ export default function App() {
       <footer className="max-w-[1600px] mx-auto px-6 py-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
         <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">© 2026 AI 交易矩陣 • 高頻模擬環境</p>
         <div className="flex gap-6">
-          <a href="#" className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">文檔</a>
-          <a href="#" className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">API 訪問</a>
-          <a href="#" className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">安全</a>
+          <button onClick={() => navigate('/about')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">About</button>
+          <button onClick={() => navigate('/privacy')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">Privacy</button>
+          <button onClick={() => navigate('/')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">Dashboard</button>
         </div>
       </footer>
     </div>
@@ -970,5 +1012,31 @@ function StatCard({ label, value, icon, trend, trendUp }: { label: string, value
       <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">{label}</p>
       <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
     </div>
+  );
+}
+
+function StaticPage({
+  title,
+  description,
+  sections,
+}: {
+  title: string;
+  description: string;
+  sections: Array<{ heading: string; body: string }>;
+}) {
+  return (
+    <main className="max-w-[1100px] mx-auto p-4 space-y-6 sm:p-6">
+      <section className="rounded-2xl border border-white/5 bg-[#111] p-6 shadow-2xl sm:p-8">
+        <h1 className="text-2xl font-bold text-white sm:text-3xl">{title}</h1>
+        <p className="mt-4 text-sm leading-7 text-white/70 sm:text-base">{description}</p>
+      </section>
+
+      {sections.map((section) => (
+        <section key={section.heading} className="rounded-2xl border border-white/5 bg-[#111] p-6 shadow-2xl sm:p-8">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-emerald-400">{section.heading}</h2>
+          <p className="mt-4 text-sm leading-7 text-white/70 sm:text-base">{section.body}</p>
+        </section>
+      ))}
+    </main>
   );
 }
