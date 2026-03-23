@@ -24,11 +24,12 @@ export default function Agents() {
     try {
       const res = await fetch('/api/agents');
       const data = await res.json();
-      if (!Array.isArray(data)) {
+      const agents = Array.isArray(data) ? data : (Array.isArray(data?.agents) ? data.agents : null);
+      if (!Array.isArray(agents)) {
         setRows([]);
         return;
       }
-      const mapped: ExportRow[] = data.map((a: any) => ({
+      const mapped: ExportRow[] = agents.map((a: any) => ({
         id: a.id,
         name: a.name,
         strategyType: a.strategyType,

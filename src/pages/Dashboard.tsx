@@ -62,8 +62,11 @@ export default function Dashboard() {
       try {
         const response = await fetch("/api/agents");
         const savedAgents = await response.json();
-        if (savedAgents && Array.isArray(savedAgents) && savedAgents.length === AGENT_COUNT) {
-          setAgents(savedAgents);
+        const agents = Array.isArray(savedAgents)
+          ? savedAgents
+          : (Array.isArray(savedAgents?.agents) ? savedAgents.agents : null);
+        if (agents && agents.length === AGENT_COUNT) {
+          setAgents(agents);
         } else {
           // Initialize agents with random symbols from Bybit
           const initialAgents = generateAgents(AGENT_COUNT, symbols);

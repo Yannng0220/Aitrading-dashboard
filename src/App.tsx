@@ -24,7 +24,28 @@ import { Agent, MarketData, Trade, Position } from './types';
 import { generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
 
 const AGENT_COUNT = 100;
-const AGENTS_STORAGE_KEY = 'agentsState:v1';
+const AGENTS_STORAGE_KEY = 'agentsState:v2';
+
+type SavedAgentsState = {
+  savedAt: number;
+  agents: Agent[];
+};
+
+const parseSavedState = (raw: string | null): SavedAgentsState | null => {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length === AGENT_COUNT) {
+      return { savedAt: 0, agents: parsed };
+    }
+    if (parsed && Array.isArray(parsed.agents) && parsed.agents.length === AGENT_COUNT) {
+      return { savedAt: Number(parsed.savedAt) || 0, agents: parsed.agents };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
 
 export default function App() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -60,34 +81,35 @@ export default function App() {
       pricesRef.current = allPrices;
       setPrices(allPrices);
 
-      // Prefer local browser state first so refresh does not wipe active trades.
-      try {
-        const localRaw = localStorage.getItem(AGENTS_STORAGE_KEY);
-        if (localRaw) {
-          const localAgents = JSON.parse(localRaw);
-          if (Array.isArray(localAgents) && localAgents.length === AGENT_COUNT) {
-            setAgents(localAgents);
-          }
-        }
-      } catch (error) {
-        console.warn('local agent state read failed', error);
+      // Prefer local browser state so refresh does not wipe active trades.
+      const localState = parseSavedState(localStorage.getItem(AGENTS_STORAGE_KEY));
+      if (localState) {
+        setAgents(localState.agents);
       }
 
       // Then try backend state as a cross-device/shared fallback.
       try {
         const response = await fetch("/api/agents");
         const savedAgents = await response.json();
-        if (savedAgents && Array.isArray(savedAgents) && savedAgents.length === AGENT_COUNT) {
-          setAgents(savedAgents);
-        } else {
+        const serverState: SavedAgentsState | null = Array.isArray(savedAgents)
+          ? { savedAt: 0, agents: savedAgents }
+          : (savedAgents && Array.isArray(savedAgents.agents) ? { savedAt: Number(savedAgents.savedAt) || 0, agents: savedAgents.agents } : null);
+
+        if (serverState && serverState.agents.length === AGENT_COUNT) {
+          if (!localState || serverState.savedAt > localState.savedAt) {
+            setAgents(serverState.agents);
+          }
+        } else if (!localState) {
           // Initialize agents with random symbols from Bybit
           const initialAgents = generateAgents(AGENT_COUNT, symbols);
           setAgents(initialAgents);
         }
       } catch (error) {
         console.error("Failed to fetch agents state:", error);
-        const initialAgents = generateAgents(AGENT_COUNT, symbols);
-        setAgents(initialAgents);
+        if (!localState) {
+          const initialAgents = generateAgents(AGENT_COUNT, symbols);
+          setAgents(initialAgents);
+        }
       }
 
       // Initialize history for each symbol
@@ -106,8 +128,9 @@ export default function App() {
   useEffect(() => {
     if (agents.length === 0) return;
 
+    const snapshot: SavedAgentsState = { savedAt: Date.now(), agents };
     try {
-      localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify(agents));
+      localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify(snapshot));
     } catch (error) {
       console.warn('local agent state write failed', error);
     }
@@ -118,7 +141,7 @@ export default function App() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           keepalive: true,
-          body: JSON.stringify(agents)
+          body: JSON.stringify(snapshot)
         });
       } catch (error) {
         console.error("Failed to save agents state:", error);
