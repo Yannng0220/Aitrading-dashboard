@@ -23,6 +23,7 @@ import { Agent, MarketData, Trade, Position } from './types';
 import { generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
 
 const AGENT_COUNT = 100;
+const AGENTS_STORAGE_KEY = 'agentsState:v1';
 
 export default function App() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -58,7 +59,20 @@ export default function App() {
       pricesRef.current = allPrices;
       setPrices(allPrices);
 
-      // Try to fetch state from backend
+      // Prefer local browser state first so refresh does not wipe active trades.
+      try {
+        const localRaw = localStorage.getItem(AGENTS_STORAGE_KEY);
+        if (localRaw) {
+          const localAgents = JSON.parse(localRaw);
+          if (Array.isArray(localAgents) && localAgents.length === AGENT_COUNT) {
+            setAgents(localAgents);
+          }
+        }
+      } catch (error) {
+        console.warn('local agent state read failed', error);
+      }
+
+      // Then try backend state as a cross-device/shared fallback.
       try {
         const response = await fetch("/api/agents");
         const savedAgents = await response.json();
@@ -87,23 +101,30 @@ export default function App() {
     initMarket();
   }, []);
 
-  // Save state periodically
+  // Persist state quickly so a refresh does not reset the simulation.
   useEffect(() => {
     if (agents.length === 0) return;
-    
-    const saveInterval = setInterval(async () => {
+
+    try {
+      localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify(agents));
+    } catch (error) {
+      console.warn('local agent state write failed', error);
+    }
+
+    const saveTimer = window.setTimeout(async () => {
       try {
         await fetch("/api/agents", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          keepalive: true,
           body: JSON.stringify(agents)
         });
       } catch (error) {
         console.error("Failed to save agents state:", error);
       }
-    }, 10000); // Save every 10 seconds
+    }, 1000);
 
-    return () => clearInterval(saveInterval);
+    return () => window.clearTimeout(saveTimer);
   }, [agents]);
 
   // Simulation Loop
