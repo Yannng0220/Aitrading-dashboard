@@ -27,10 +27,12 @@ import { Agent, MarketData, Trade, Position } from './types';
 import { generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
 import Learning from './pages/Learning';
 import LearningAgentDetail from './pages/LearningAgentDetail';
+import type { Language } from './pages/Learning';
 
 const AGENT_COUNT = 100;
 const AGENTS_STORAGE_KEY = 'agentsState:v2';
 const DEVICE_ID_STORAGE_KEY = 'agentsDeviceId:v1';
+const UI_LANG_STORAGE_KEY = 'uiLang:v1';
 
 type SavedAgentsState = {
   savedAt: number;
@@ -79,6 +81,14 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [lang, setLang] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem(UI_LANG_STORAGE_KEY);
+      return saved === 'en' ? 'en' : 'zh';
+    } catch {
+      return 'zh';
+    }
+  });
   const [startedAt, setStartedAt] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('startedAt');
@@ -369,6 +379,14 @@ export default function App() {
     }
   }, [startedAt]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(UI_LANG_STORAGE_KEY, lang);
+    } catch (error) {
+      console.warn('localStorage write failed', error);
+    }
+  }, [lang]);
+
   const filteredAgents = useMemo(() => {
     return agents
       .filter(a => 
@@ -396,6 +414,97 @@ export default function App() {
 
   const selectedAgent = selectedAgentId !== null ? agents.find(a => a.id === selectedAgentId) : null;
   const selectedLearningAgent = learningAgentId !== null ? agents.find((agent) => agent.id === learningAgentId) ?? null : null;
+  const ui = lang === 'zh'
+    ? {
+        navDashboard: '儀表板',
+        navLearning: '學習頁',
+        liveEngine: '即時市場引擎',
+        selectorPlaceholder: '選擇 AI',
+        selectorSearch: '搜尋名稱或策略...',
+        marketStatusLabel: '市場狀態',
+        marketStatusValue: '多資產',
+        footerAbout: '關於',
+        footerPrivacy: '隱私',
+        footerDashboard: '儀表板',
+        footerCopyright: '© 2026 Yang-RotBot Trading • 模擬交易環境',
+        aboutTitle: '關於 Yang-RotBot Trading',
+        aboutDescription: 'Yang-RotBot Trading 是一個以瀏覽器為基礎的交易模擬儀表板，用來展示多代理策略行為、介面設計，以及教育用途的市場分析。',
+        aboutSections: [
+          {
+            heading: '網站用途',
+            body: '本站展示模擬代理、資產變化、策略日誌與學習建議，讓訪客可以在可控環境中理解交易規則如何隨時間運作。',
+          },
+          {
+            heading: '資訊性質',
+            body: '本站顯示的所有資料、績效結果與策略洞察都屬於模擬內容，不構成投資建議、交易建議，也不保證真實世界的金融結果。',
+          },
+          {
+            heading: '內容說明',
+            body: '此頁面用來清楚說明產品定位、模擬範圍與教育目的，讓訪客不只看到即時介面，也能理解網站提供的內容。',
+          },
+        ],
+        privacyTitle: '隱私政策',
+        privacyDescription: '本站可能會儲存有限的瀏覽器資料，並處理呈現儀表板、維持同步與提供伺服器功能所需的請求。',
+        privacySections: [
+          {
+            heading: '瀏覽器儲存',
+            body: '網站可能會在瀏覽器中保存裝置識別、介面狀態與模擬快照，讓頁面重新整理後能正確恢復並維持跨工作階段連續性。',
+          },
+          {
+            heading: 'Cloudflare 處理',
+            body: '本站請求可能由 Cloudflare Pages、Workers、Durable Objects、KV 與相關記錄服務處理，以支援路由、同步、可靠性與效能。',
+          },
+          {
+            heading: '廣告與第三方服務',
+            body: '如果啟用廣告或分析服務，相關供應商可能會依其自身政策處理資料。站主應額外揭露任何啟用中的第三方服務。',
+          },
+        ],
+      }
+    : {
+        navDashboard: 'Dashboard',
+        navLearning: 'Learning',
+        liveEngine: 'Live Market Engine',
+        selectorPlaceholder: 'Select AI',
+        selectorSearch: 'Search by name or strategy...',
+        marketStatusLabel: 'Market Status',
+        marketStatusValue: 'Multi-Asset',
+        footerAbout: 'About',
+        footerPrivacy: 'Privacy',
+        footerDashboard: 'Dashboard',
+        footerCopyright: '© 2026 Yang-RotBot Trading • Simulation Trading Environment',
+        aboutTitle: 'About Yang-RotBot Trading',
+        aboutDescription: 'Yang-RotBot Trading is a browser-based trading simulation dashboard built to demonstrate multi-agent strategy behavior, interface design, and educational market analysis.',
+        aboutSections: [
+          {
+            heading: 'Purpose of the site',
+            body: 'This website presents simulated agents, portfolio changes, strategy logs, and learning suggestions so visitors can understand how trading rules behave over time in a controlled environment.',
+          },
+          {
+            heading: 'Nature of the information',
+            body: 'All data, performance results, and strategy insights shown on this site are part of a simulation. They do not constitute investment advice, trading advice, or any guarantee of real-world financial results.',
+          },
+          {
+            heading: 'Publisher content',
+            body: 'This page exists to clearly explain the product, the simulation scope, and the educational purpose of the dashboard so that visitors can understand what the site is about beyond the live interface.',
+          },
+        ],
+        privacyTitle: 'Privacy Policy',
+        privacyDescription: 'This website may store limited browser data and process operational requests needed to render the dashboard, maintain synchronization, and deliver server-side features.',
+        privacySections: [
+          {
+            heading: 'Browser storage',
+            body: 'The site may store local identifiers, interface state, and simulation snapshots in browser storage so pages can recover correctly after refresh and maintain cross-session continuity.',
+          },
+          {
+            heading: 'Cloudflare processing',
+            body: 'Requests may be handled by Cloudflare Pages, Workers, Durable Objects, KV, and related logging services for routing, synchronization, reliability, and performance.',
+          },
+          {
+            heading: 'Advertising and third parties',
+            body: 'If advertising or analytics services are enabled, those providers may apply their own policies and data handling practices. The site owner should disclose any active third-party services accordingly.',
+          },
+        ],
+      };
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#e0e0e0] font-sans selection:bg-emerald-500/30">
@@ -421,7 +530,7 @@ export default function App() {
                 )}
               >
                 <LayoutDashboard className="h-3.5 w-3.5" />
-                Dashboard
+                {ui.navDashboard}
               </button>
               <button
                 onClick={() => navigate('/learning')}
@@ -433,13 +542,13 @@ export default function App() {
                 )}
               >
                 <BrainCircuit className="h-3.5 w-3.5" />
-                Learning
+                {ui.navLearning}
               </button>
             </div>
 
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-[10px] font-bold tracking-widest uppercase">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              Live Market Engine
+              {ui.liveEngine}
             </div>
 
             {/* AI Selector Dropdown */}
@@ -449,7 +558,7 @@ export default function App() {
                 className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all text-sm font-medium"
               >
                 <Cpu className="w-4 h-4 text-emerald-500" />
-                {selectedAgent ? selectedAgent.name : "選擇 AI 代理"}
+                {selectedAgent ? selectedAgent.name : ui.selectorPlaceholder}
                 <ChevronDown className={cn("w-4 h-4 transition-transform", isSelectorOpen && "rotate-180")} />
               </button>
               
@@ -464,7 +573,7 @@ export default function App() {
                     <div className="sticky top-0 bg-[#111] pb-2 mb-2 border-b border-white/5">
                       <input 
                         type="text" 
-                        placeholder="搜索代理..." 
+                        placeholder={ui.selectorSearch} 
                         className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500/50"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -492,11 +601,24 @@ export default function App() {
               </AnimatePresence>
             </div>
 
+            <div className="flex items-center rounded-full border border-white/10 bg-white/5 p-1">
+              {(['zh', 'en'] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setLang(option)}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                    lang === option ? 'bg-sky-500/15 text-sky-300' : 'text-white/45 hover:text-white'
+                  )}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+
             <div className="flex flex-col items-end">
-              <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">市場狀態</span>
-              <span className="font-mono text-lg font-medium text-emerald-400">
-                多資產
-              </span>
+              <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">{ui.marketStatusLabel}</span>
+              <span className="font-mono text-lg font-medium text-emerald-400">{ui.marketStatusValue}</span>
             </div>
             
             <button 
@@ -510,46 +632,20 @@ export default function App() {
       </header>
 
       {currentPage === 'learning' ? (
-        <Learning agents={agents} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} />
+        <Learning agents={agents} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} lang={lang} />
       ) : currentPage === 'learning-agent' ? (
-        <LearningAgentDetail agent={selectedLearningAgent} onBack={() => navigate('/learning')} />
+        <LearningAgentDetail agent={selectedLearningAgent} onBack={() => navigate('/learning')} lang={lang} />
       ) : currentPage === 'about' ? (
         <StaticPage
-          title="About Yang-RotBot Trading"
-          description="Yang-RotBot Trading is a browser-based trading simulation dashboard built to demonstrate multi-agent strategy behavior, interface design, and educational market analysis."
-          sections={[
-            {
-              heading: 'Purpose of the site',
-              body: 'This website presents simulated agents, portfolio changes, strategy logs, and learning suggestions so visitors can understand how trading rules behave over time in a controlled environment.',
-            },
-            {
-              heading: 'Nature of the information',
-              body: 'All data, performance results, and strategy insights shown on this site are part of a simulation. They do not constitute investment advice, trading advice, or any guarantee of real-world financial results.',
-            },
-            {
-              heading: 'Publisher content',
-              body: 'This page exists to clearly explain the product, the simulation scope, and the educational purpose of the dashboard so that visitors can understand what the site is about beyond the live interface.',
-            },
-          ]}
+          title={ui.aboutTitle}
+          description={ui.aboutDescription}
+          sections={ui.aboutSections}
         />
       ) : currentPage === 'privacy' ? (
         <StaticPage
-          title="Privacy Policy"
-          description="This website may store limited browser data and process operational requests needed to render the dashboard, maintain synchronization, and deliver server-side features."
-          sections={[
-            {
-              heading: 'Browser storage',
-              body: 'The site may store local identifiers, interface state, and simulation snapshots in browser storage so pages can recover correctly after refresh and maintain cross-session continuity.',
-            },
-            {
-              heading: 'Cloudflare processing',
-              body: 'Requests may be handled by Cloudflare Pages, Workers, Durable Objects, KV, and related logging services for routing, synchronization, reliability, and performance.',
-            },
-            {
-              heading: 'Advertising and third parties',
-              body: 'If advertising or analytics services are enabled, those providers may apply their own policies and data handling practices. The site owner should disclose any active third-party services accordingly.',
-            },
-          ]}
+          title={ui.privacyTitle}
+          description={ui.privacyDescription}
+          sections={ui.privacySections}
         />
       ) : (
       <main className="max-w-[1600px] mx-auto p-4 grid grid-cols-12 gap-4 sm:p-6 sm:gap-6">
@@ -982,11 +1078,11 @@ export default function App() {
 
       {/* Footer */}
       <footer className="max-w-[1600px] mx-auto px-6 py-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">© 2026 AI 交易矩陣 • 高頻模擬環境</p>
+        <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">{ui.footerCopyright}</p>
         <div className="flex gap-6">
-          <button onClick={() => navigate('/about')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">About</button>
-          <button onClick={() => navigate('/privacy')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">Privacy</button>
-          <button onClick={() => navigate('/')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">Dashboard</button>
+          <button onClick={() => navigate('/about')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerAbout}</button>
+          <button onClick={() => navigate('/privacy')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerPrivacy}</button>
+          <button onClick={() => navigate('/')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerDashboard}</button>
         </div>
       </footer>
     </div>
