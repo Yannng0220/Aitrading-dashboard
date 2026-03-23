@@ -375,7 +375,7 @@ export const executeStrategy = (
       unrealizedPL: 0,
       performance: -100,
       status: 'IDLE',
-      trades: newTrades.slice(-20)
+      trades: newTrades.slice(0, 20)
     };
   }
 
@@ -386,6 +386,6 @@ export const executeStrategy = (
     unrealizedPL: totalUnrealizedPL,
     performance,
     status: newStatus,
-    trades: newTrades.slice(-20)
+    trades: newTrades.slice(0, 20)
   };
 };

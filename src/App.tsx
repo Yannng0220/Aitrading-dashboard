@@ -635,7 +635,7 @@ export default function App() {
                     
                     <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                       {selectedAgent.trades.length > 0 ? (
-                        selectedAgent.trades.slice().reverse().map(trade => (
+                        selectedAgent.trades.map(trade => (
                           <div key={trade.id} className="group/trade bg-black/40 rounded-xl p-3 border border-white/5 hover:border-white/10 transition-all">
                             <div className="flex flex-col items-start gap-2 mb-2 sm:flex-row sm:items-center sm:justify-between">
                               <div className="flex flex-wrap items-center gap-2">
