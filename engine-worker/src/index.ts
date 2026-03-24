@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { fetchAllBybitTickers, type PriceMap } from "../../functions/_shared/bybit";
-import { generateAgents, executeStrategy } from "../../src/simulation";
+import { applyAgentMigrations, generateAgents, executeStrategy } from "../../src/simulation";
 import type { Agent } from "../../src/types";
 
 const ENGINE_TICK_MS = 5000;
@@ -40,7 +40,7 @@ async function buildInitialState(): Promise<EngineState> {
     startedAt: now,
     savedAt: now,
     lastTickAt: now,
-    agents,
+    agents: applyAgentMigrations(agents, symbols),
     prices,
     historyMap,
   };
@@ -83,8 +83,13 @@ export class TradingEngine extends DurableObject<Env> {
   private async ensureInitialized(): Promise<EngineState> {
     const stored = await this.ctx.storage.get<EngineState>(ENGINE_STATE_KEY);
     if (stored) {
+      const migrated = {
+        ...stored,
+        agents: applyAgentMigrations(stored.agents, Object.keys(stored.prices)),
+      };
+      await this.ctx.storage.put(ENGINE_STATE_KEY, migrated);
       await this.ensureAlarm();
-      return stored;
+      return migrated;
     }
 
     const state = await buildInitialState();
@@ -115,7 +120,7 @@ export class TradingEngine extends DurableObject<Env> {
       nextHistoryMap[symbol] = [...existing.slice(-19), price];
     }
 
-    const nextAgents = current.agents.map((agent) => ({
+    const nextAgents = applyAgentMigrations(current.agents, Object.keys(prices)).map((agent) => ({
       ...agent,
       ...executeStrategy(agent, prices, nextHistoryMap),
     }));

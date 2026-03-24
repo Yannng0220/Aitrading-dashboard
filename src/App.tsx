@@ -26,7 +26,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from './lib/utils';
 import { compareAgentsByDashboardRank, getDashboardRankedAgents } from './lib/ranking';
 import { Agent, MarketData, Trade, Position } from './types';
-import { generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
+import { applyAgentMigrations, generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
 import Learning from './pages/Learning';
 import LearningAgentDetail from './pages/LearningAgentDetail';
 import TopProfit from './pages/TopProfit';
@@ -113,7 +113,7 @@ export default function App() {
 
   const applySavedAgents = (nextAgents: Agent[], savedAt: number) => {
     latestSavedAtRef.current = savedAt;
-    setAgents(nextAgents);
+    setAgents(applyAgentMigrations(nextAgents, Object.keys(pricesRef.current)));
   };
 
   // Initialize agents and market history
@@ -349,7 +349,7 @@ export default function App() {
 
       // 2. Update Agents
       setAgents(prevAgents => 
-        prevAgents.map(agent => {
+        applyAgentMigrations(prevAgents, Object.keys(allPrices)).map(agent => {
           const updates = executeStrategy(agent, allPrices, historyMapRef.current);
           return { ...agent, ...updates };
         })

@@ -1,122 +1,229 @@
-import { Agent, Position } from './types';
+import { Agent, Position, Trade } from './types';
+
+export type PriceMap = Record<string, number>;
+
+const DEFAULT_SYMBOLS = ['BTCUSDT'];
+const FEE_RATE = 0.0006;
+const BASE_BALANCE = 1000;
+const SMC_AGENT_ID = 4;
+const SMC_STRATEGY_VERSION = 'smc-five-core-v1';
 
 const STRATEGY_DESCRIPTIONS = [
-  "基於 RSI 超買超賣的逆勢交易",
-  "雙均線金叉/死叉趨勢追蹤",
-  "布林帶寬度突破策略",
-  "MACD 柱狀圖背離分析",
-  "成交量加權平均價格 (VWAP) 偏離策略",
-  "斐波那契回撤位支撐確認",
-  "KDJ 指標隨機震盪過濾",
-  "平均真實波幅 (ATR) 波動率突破",
-  "拋物線轉向 (SAR) 趨勢反轉",
-  "一目均衡表 (Ichimoku) 雲圖突破",
-  "威廉指標 (W%R) 極限反轉",
-  "順勢指標 (CCI) 週期性波動",
-  "能量潮 (OBV) 量價背離",
-  "錢德動量擺動指標 (CMO) 強度分析",
-  "阿隆指標 (Aroon) 趨勢強度判斷",
-  "三重指數平滑平均線 (TRIX) 動量過濾",
-  "蔡金波動率 (Chaikin Volatility) 擴張策略",
-  "艾達爾射線 (Elder Ray) 多空力量對比",
-  "顧比複合均線 (GMMA) 趨勢層次分析",
-  "唐奇安通道 (Donchian Channel) 價格突破",
-  "肯特納通道 (Keltner Channel) 均值回歸",
-  "線性回歸斜率趨勢確認",
-  "標準差波動區間交易",
-  "分形幾何 (Fractals) 拐點識別",
-  "心理線 (PSY) 市場情緒量化",
-  "乖離率 (BIAS) 過度偏離修正",
-  "變動率 (ROC) 速度突破",
-  "強力指數 (Force Index) 趨勢確認",
-  "質量指標 (Mass Index) 趨勢反轉預警",
-  "終極擺動指標 (Ultimate Oscillator) 多時段分析"
+  'RSI mean reversion around oversold and overbought extremes.',
+  'Trend-following momentum with moving-average confirmation.',
+  'Breakout continuation after multi-session compression.',
+  'MACD crossover with volatility filter.',
+  'VWAP deviation fade with dynamic risk control.',
+  'ATR expansion breakout after low-volatility range.',
+  'KDJ oscillator reversal model.',
+  'ATR stop-and-reverse intraday engine.',
+  'Parabolic SAR trend continuation model.',
+  'Ichimoku cloud continuation and pullback entries.',
+  'Williams %R reversal timing.',
+  'CCI impulse rotation model.',
+  'OBV confirmation for directional flow.',
+  'Aroon trend emergence detector.',
+  'TRIX acceleration filter.',
+  'Chaikin volatility expansion model.',
+  'Donchian breakout with pullback validation.',
+  'Keltner channel trend ride.',
+  'Fractal breakout scanner.',
+  'Force index pressure model.',
 ];
 
-const ADJECTIVES = ['阿爾法', '西格瑪', '量子', '神經', '賽博', '向量', '極致', '巔峰', '頂點', '新星', '暗影', '泰坦', '幽靈', '星際', '矩陣', '雷霆', '幻影', '神諭', '先鋒', '深淵'];
-const NOUNS = ['交易員', '機器人', '引擎', '節點', '代理', '思維', '核心', '邏輯', '流轉', '脈衝', '哨兵', '獵手', '守護', '先知', '工匠', '大師', '行者', '信使', '幽靈', '火花'];
+const ADJECTIVES = [
+  '矩陣',
+  '極致',
+  '新星',
+  '雷霆',
+  '向量',
+  '阿爾法',
+  '先鋒',
+  '泰坦',
+  '幽靈',
+  '頂點',
+];
 
-export const fetchAllBybitTickers = async (): Promise<Record<string, number>> => {
+const NOUNS = [
+  '交易員',
+  '節點',
+  '脈衝',
+  '引擎',
+  '行者',
+  '代理',
+  '獵者',
+  '觀測者',
+  '信使',
+  '機器人',
+];
+
+type StrategyParams = {
+  logicVersion?: string;
+  riskTolerance: number;
+  timeframe: 'SHORT' | 'LONG';
+  sensitivity: number;
+  threshold: number;
+  exitThreshold: number;
+  stopLoss: number;
+  takeProfit: number;
+  leverageMin?: number;
+  leverageMax?: number;
+  maxRiskPerTrade?: number;
+  confirmationThreshold?: number;
+  orderBlockTolerance?: number;
+  preferredSymbols?: string[];
+  scanCount?: number;
+};
+
+type SmcSignals = {
+  direction: 'LONG' | 'SHORT' | null;
+  oiBias: number;
+  cvdBias: number;
+  bos: boolean;
+  choch: boolean;
+  orderBlockMid: number;
+  orderBlockDistance: number;
+  nearOrderBlock: boolean;
+  fvg: boolean;
+  liquiditySweep: boolean;
+  confirmationScore: number;
+  reasons: string[];
+  invalidationScore: number;
+};
+
+function randomItem<T>(items: T[]) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function buildGenericName(index: number) {
+  return `${randomItem(ADJECTIVES)} ${randomItem(NOUNS)} #${index + 1}`;
+}
+
+function getMaxLeverage(symbol: string): number {
+  if (symbol === 'BTCUSDT' || symbol === 'ETHUSDT') return 100;
+  if (['SOLUSDT', 'XRPUSDT', 'ADAUSDT', 'AVAXUSDT', 'DOTUSDT'].includes(symbol)) return 50;
+  return 20;
+}
+
+function getStrategyParams(agent: Agent): StrategyParams {
+  const params = (agent.strategyParams ?? {}) as StrategyParams;
+  return {
+    riskTolerance: params.riskTolerance ?? 0.1,
+    timeframe: params.timeframe ?? 'SHORT',
+    sensitivity: params.sensitivity ?? 1,
+    threshold: params.threshold ?? 0.002,
+    exitThreshold: params.exitThreshold ?? 0.005,
+    stopLoss: params.stopLoss ?? 0.02,
+    takeProfit: params.takeProfit ?? 0.04,
+    leverageMin: params.leverageMin ?? 3,
+    leverageMax: params.leverageMax ?? 12,
+    maxRiskPerTrade: params.maxRiskPerTrade ?? 0.02,
+    confirmationThreshold: params.confirmationThreshold ?? 4,
+    orderBlockTolerance: params.orderBlockTolerance ?? 0.004,
+    preferredSymbols: params.preferredSymbols ?? [],
+    scanCount: params.scanCount ?? 15,
+    logicVersion: params.logicVersion,
+  };
+}
+
+function createSmcAgent(availableSymbols: string[], existingName?: string): Agent {
+  const preferred = availableSymbols.slice(0, 12);
+  return {
+    id: SMC_AGENT_ID,
+    name: existingName ?? 'SMC 交易員 #5',
+    strategyType: 'SMC / CoinAnk',
+    strategy:
+      'SMC 五大核心信號：BOS、CHoCH、Order Block、FVG、Liquidity Sweep，並以 CoinAnk 風格驗證 OI / CVD / 爆倉 / 訂單流代理訊號後分批建倉。',
+    balance: BASE_BALANCE,
+    activePositions: {},
+    equity: BASE_BALANCE,
+    unrealizedPL: 0,
+    trades: [],
+    performance: 0,
+    color: 'hsl(36, 88%, 54%)',
+    status: 'IDLE',
+    strategyParams: {
+      logicVersion: SMC_STRATEGY_VERSION,
+      riskTolerance: 0.02,
+      timeframe: 'SHORT',
+      sensitivity: 1.15,
+      threshold: 0.003,
+      exitThreshold: 0.004,
+      stopLoss: 0.01,
+      takeProfit: 0.025,
+      leverageMin: 4,
+      leverageMax: 8,
+      maxRiskPerTrade: 0.02,
+      confirmationThreshold: 4,
+      orderBlockTolerance: 0.0035,
+      preferredSymbols: preferred,
+      scanCount: 12,
+    },
+  };
+}
+
+export function applyAgentMigrations(agents: Agent[], availableSymbols: string[] = DEFAULT_SYMBOLS): Agent[] {
+  return agents.map((agent, index) => {
+    if (index !== SMC_AGENT_ID) return agent;
+    const params = getStrategyParams(agent);
+    if (params.logicVersion === SMC_STRATEGY_VERSION) {
+      return {
+        ...agent,
+        strategyType: 'SMC / CoinAnk',
+        strategy:
+          'SMC 五大核心信號：BOS、CHoCH、Order Block、FVG、Liquidity Sweep，並以 CoinAnk 風格驗證 OI / CVD / 爆倉 / 訂單流代理訊號後分批建倉。',
+        strategyParams: {
+          ...params,
+          logicVersion: SMC_STRATEGY_VERSION,
+        },
+      };
+    }
+    return createSmcAgent(availableSymbols, agent.name || `SMC 交易員 #${SMC_AGENT_ID + 1}`);
+  });
+}
+
+export const fetchAllBybitTickers = async (): Promise<PriceMap> => {
   try {
-    // Use same-origin proxy endpoint (works on Netlify/GitHub Pages with a backend proxy)
-    const response = await fetch(`/api/tickers?category=linear`);
+    const response = await fetch('/api/tickers?category=linear');
     const data = await response.json();
     if (data.retCode === 0 && data.result.list) {
-      const prices: Record<string, number> = {};
+      const prices: PriceMap = {};
       data.result.list.forEach((item: any) => {
-        // Only include USDT perpetuals
         if (item.symbol.endsWith('USDT')) {
           prices[item.symbol] = parseFloat(item.lastPrice);
         }
       });
-      // Fallback if no USDT symbols found (unlikely but safe)
       if (Object.keys(prices).length === 0) {
-        prices['BTCUSDT'] = 65000 + (Math.random() - 0.5) * 100;
+        prices.BTCUSDT = 65000 + (Math.random() - 0.5) * 100;
       }
       return prices;
     }
     throw new Error('Invalid API response');
   } catch (error) {
     console.error('Error fetching Bybit tickers, using fallback:', error);
-    // Return mock data to keep simulation alive
-    return { 
-      'BTCUSDT': 65000 + (Math.random() - 0.5) * 100,
-      'ETHUSDT': 3500 + (Math.random() - 0.5) * 10,
-      'SOLUSDT': 145 + (Math.random() - 0.5) * 2
+    return {
+      BTCUSDT: 65000 + (Math.random() - 0.5) * 100,
+      ETHUSDT: 3500 + (Math.random() - 0.5) * 10,
+      SOLUSDT: 145 + (Math.random() - 0.5) * 2,
     };
   }
 };
 
-export const generateAgents = (count: number, availableSymbols: string[] = ['BTCUSDT']): Agent[] => {
-  const agents: Agent[] = Array.from({ length: count }, (_, i) => {
-    const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-    const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-    
-    // Assign a unique base strategy description
-    let baseDesc = STRATEGY_DESCRIPTIONS[i % STRATEGY_DESCRIPTIONS.length];
-    let strategyType = i < 30 ? '高頻刷單' : (i < 60 ? '趨勢跟隨' : '均值回歸');
-
-    // Special strategies for agents #30 to #40 (IDs 29 to 39)
-    const specialStrategies = [
-      "SNR (支撐與阻力) 關鍵位反轉",
-      "SMC (聰明錢概念) 機構訂單流追蹤",
-      "楔形 (Wedge) 形態收斂突破",
-      "Order Block (訂單塊) 需求區回踩",
-      "Fair Value Gap (FVG) 缺口回補策略",
-      "Liquidity Sweep (流動性掃蕩) 假突破陷阱",
-      "Wyckoff (威科夫) 累積區間吸籌",
-      "BOS (結構突破) 趨勢延續確認",
-      "CHOCH (性格改變) 趨勢反轉預警",
-      "Supply and Demand (供需區) 高勝率博弈",
-      "Harmonic Pattern (諧波形態) 精準反轉"
-    ];
-
-    if (i === 29) {
-      baseDesc = "激進短期策略，使用突破策略";
-      strategyType = "突破策略";
-    } else if (i >= 30 && i <= 39) {
-      baseDesc = specialStrategies[i - 29];
-      // Use the short name + '策略' as the strategy type for better visibility
-      strategyType = baseDesc.split(' ')[0] + '策略'; 
-    }
-    
-    // Randomize parameters to make each agent unique even if they share a base strategy
-    const riskTolerance = 0.05 + Math.random() * 0.25; // 5% to 30%
+export const generateAgents = (count: number, availableSymbols: string[] = DEFAULT_SYMBOLS): Agent[] => {
+  const agents: Agent[] = Array.from({ length: count }, (_, index) => {
+    const description = STRATEGY_DESCRIPTIONS[index % STRATEGY_DESCRIPTIONS.length];
+    const sensitivity = 0.65 + Math.random() * 1.2;
+    const riskTolerance = 0.05 + Math.random() * 0.18;
     const timeframe = Math.random() > 0.5 ? 'SHORT' : 'LONG';
-    const sensitivity = 0.5 + Math.random() * 1.5; // Multiplier for indicator thresholds
-    
-    const symbol = availableSymbols.length > 0 
-      ? availableSymbols[Math.floor(Math.random() * availableSymbols.length)]
-      : 'BTCUSDT';
-    
+
     return {
-      id: i,
-      name: `${adj} ${noun} #${i + 1}`,
-      strategy: `${baseDesc} (風險係數: ${riskTolerance.toFixed(2)}, 敏感度: ${sensitivity.toFixed(2)})`,
-      strategyType: strategyType,
-      balance: 1000,
+      id: index,
+      name: buildGenericName(index),
+      strategy: `${description} (risk=${riskTolerance.toFixed(2)}, sensitivity=${sensitivity.toFixed(2)})`,
+      strategyType: index < 30 ? 'Momentum' : index < 60 ? 'Trend' : 'Mean Reversion',
+      balance: BASE_BALANCE,
       activePositions: {},
-      equity: 1000,
+      equity: BASE_BALANCE,
       unrealizedPL: 0,
       trades: [],
       performance: 0,
@@ -128,14 +235,19 @@ export const generateAgents = (count: number, availableSymbols: string[] = ['BTC
         sensitivity,
         threshold: 0.002 * sensitivity,
         exitThreshold: 0.005 * sensitivity,
-        stopLoss: 0.02 * (1 / sensitivity),
-        takeProfit: 0.04 * sensitivity
-      }
+        stopLoss: 0.02 / sensitivity,
+        takeProfit: 0.04 * sensitivity,
+        leverageMin: 3,
+        leverageMax: 12,
+        maxRiskPerTrade: 0.03,
+      },
     };
   });
 
-  // Agent #100 (id=99) should NOT do the forced 5s churn anymore.
-  // Copy Agent #20 (id=19) strategy configuration for consistency.
+  if (agents.length > SMC_AGENT_ID) {
+    agents[SMC_AGENT_ID] = createSmcAgent(availableSymbols);
+  }
+
   if (agents.length > 99 && agents[19]) {
     const template = agents[19];
     agents[99] = {
@@ -149,20 +261,379 @@ export const generateAgents = (count: number, availableSymbols: string[] = ['BTC
   return agents;
 };
 
-const FEE_RATE = 0.0006; // 0.06% Taker fee
+function createTradeId() {
+  return Math.random().toString(36).slice(2, 11);
+}
 
-const getMaxLeverage = (symbol: string): number => {
-  if (symbol === 'BTCUSDT' || symbol === 'ETHUSDT') return 100;
-  if (['SOLUSDT', 'XRPUSDT', 'ADAUSDT', 'AVAXUSDT', 'DOTUSDT'].includes(symbol)) return 50;
-  return 20; // Default for other alts
-};
+function previousPrice(history: number[], currentPrice: number) {
+  if (history.length >= 2) return history[history.length - 2];
+  if (history.length >= 1) return history[history.length - 1];
+  return currentPrice;
+}
 
-export const executeStrategy = (
-  agent: Agent, 
-  allPrices: Record<string, number>, 
-  allHistories: Record<string, number[]>
-): Partial<Agent> => {
-  // If equity is 0 or less, the agent is bankrupt and cannot trade
+function unrealizedPnl(pos: Position, currentPrice: number) {
+  return pos.side === 'SHORT'
+    ? (pos.avgEntryPrice - currentPrice) * pos.amount
+    : (currentPrice - pos.avgEntryPrice) * pos.amount;
+}
+
+function computeEquity(balance: number, positions: Record<string, Position>, allPrices: PriceMap) {
+  let totalUnrealizedPL = 0;
+  const normalized: Record<string, Position> = {};
+
+  Object.entries(positions).forEach(([symbol, rawPos]) => {
+    const currentPrice = allPrices[symbol];
+    const pos: Position = {
+      ...rawPos,
+      side: rawPos.side === 'SHORT' ? 'SHORT' : 'LONG',
+      unrealizedPL: currentPrice ? unrealizedPnl(rawPos, currentPrice) : rawPos.unrealizedPL,
+    };
+    totalUnrealizedPL += pos.unrealizedPL;
+    normalized[symbol] = pos;
+  });
+
+  return {
+    positions: normalized,
+    totalUnrealizedPL,
+    equity: Math.max(0, balance + totalUnrealizedPL),
+  };
+}
+
+function appendTrade(trades: Trade[], trade: Trade) {
+  trades.unshift(trade);
+  return trades.slice(0, 20);
+}
+
+function closePosition(
+  agent: Agent,
+  symbol: string,
+  currentPrice: number,
+  positions: Record<string, Position>,
+  trades: Trade[],
+  balance: number,
+  reason: string,
+) {
+  const pos = positions[symbol];
+  if (!pos) {
+    return { balance, positions, trades, status: agent.status };
+  }
+
+  const exitValue = pos.amount * currentPrice;
+  const entryValue = pos.amount * pos.avgEntryPrice;
+  const fee = exitValue * FEE_RATE;
+  const pnl = pos.side === 'SHORT'
+    ? (entryValue - exitValue) - fee
+    : (exitValue - entryValue) - fee;
+
+  const nextPositions = { ...positions };
+  delete nextPositions[symbol];
+
+  const exitOrderType: Trade['type'] = pos.side === 'SHORT' ? 'BUY' : 'SELL';
+  const nextTrades = appendTrade(trades, {
+    id: createTradeId(),
+    timestamp: Date.now(),
+    symbol,
+    type: exitOrderType,
+    action: 'EXIT',
+    positionSide: pos.side,
+    price: currentPrice,
+    amount: pos.amount,
+    fee,
+    leverage: pos.leverage,
+    realizedPL: pnl,
+    reason,
+  });
+
+  return {
+    balance: balance + pnl,
+    positions: nextPositions,
+    trades: nextTrades,
+    status: exitOrderType === 'BUY' ? 'BUYING' : 'SELLING' as Agent['status'],
+  };
+}
+
+function openPosition(
+  symbol: string,
+  side: Position['side'],
+  price: number,
+  leverage: number,
+  margin: number,
+  positions: Record<string, Position>,
+  trades: Trade[],
+  balance: number,
+  reason: string,
+) {
+  const notional = margin * leverage;
+  const fee = notional * FEE_RATE;
+  const amount = Math.max(0, (notional - fee) / price);
+
+  if (amount <= 0) {
+    return { balance, positions, trades, status: 'IDLE' as Agent['status'] };
+  }
+
+  const nextPositions = {
+    ...positions,
+    [symbol]: {
+      symbol,
+      amount,
+      avgEntryPrice: price,
+      leverage,
+      unrealizedPL: 0,
+      side,
+    },
+  };
+
+  const orderType: Trade['type'] = side === 'SHORT' ? 'SELL' : 'BUY';
+  const nextTrades = appendTrade(trades, {
+    id: createTradeId(),
+    timestamp: Date.now(),
+    symbol,
+    type: orderType,
+    action: 'ENTRY',
+    positionSide: side,
+    price,
+    amount,
+    leverage,
+    fee,
+    reason,
+  });
+
+  return {
+    balance: balance - fee,
+    positions: nextPositions,
+    trades: nextTrades,
+    status: orderType === 'BUY' ? 'BUYING' : 'SELLING' as Agent['status'],
+  };
+}
+
+function buildSmcSignals(history: number[], currentPrice: number, params: StrategyParams): SmcSignals {
+  const recent = history.slice(-24);
+  const previous = previousPrice(recent, currentPrice);
+  const prevSegment = recent.slice(-12, -1);
+  const recentHigh = prevSegment.length > 0 ? Math.max(...prevSegment) : currentPrice;
+  const recentLow = prevSegment.length > 0 ? Math.min(...prevSegment) : currentPrice;
+  const trendMove = recent.length > 6 ? (recent[recent.length - 1] - recent[0]) / recent[0] : 0;
+  const impulse = previous !== 0 ? (currentPrice - previous) / previous : 0;
+  const returns = recent.slice(1).map((price, index) => (price - recent[index]) / recent[index]);
+  const oiBias = returns.slice(-6).reduce((sum, value) => sum + value, 0);
+  const cvdBias = returns.slice(-8).reduce((sum, value) => sum + Math.sign(value) * Math.abs(value) * 1.4, 0);
+  const bosLong = currentPrice > recentHigh * (1 + params.threshold);
+  const bosShort = currentPrice < recentLow * (1 - params.threshold);
+  const chochLong = trendMove < 0 && impulse > params.threshold * 0.8;
+  const chochShort = trendMove > 0 && impulse < -params.threshold * 0.8;
+
+  const blockWindow = recent.slice(-8, -3);
+  const orderBlockMid = blockWindow.length > 0
+    ? blockWindow.reduce((sum, value) => sum + value, 0) / blockWindow.length
+    : currentPrice;
+  const orderBlockDistance = Math.abs(currentPrice - orderBlockMid) / Math.max(currentPrice, 1);
+  const nearOrderBlock = orderBlockDistance <= (params.orderBlockTolerance ?? 0.004);
+
+  const gapReference = recent.length > 4 ? recent[recent.length - 4] : previous;
+  const fvg = Math.abs(currentPrice - gapReference) / Math.max(gapReference, 1) > params.threshold * 1.1;
+  const liquiditySweepLong = previous > recentHigh * (1 + params.threshold * 0.6) && currentPrice <= recentHigh;
+  const liquiditySweepShort = previous < recentLow * (1 - params.threshold * 0.6) && currentPrice >= recentLow;
+
+  let direction: 'LONG' | 'SHORT' | null = null;
+  if (oiBias > 0 && cvdBias > 0) direction = 'LONG';
+  if (oiBias < 0 && cvdBias < 0) direction = 'SHORT';
+
+  const reasons: string[] = [];
+  let confirmationScore = 0;
+  let invalidationScore = 0;
+
+  if (direction === 'LONG') {
+    if (bosLong) {
+      confirmationScore += 1;
+      reasons.push('BOS↑');
+    }
+    if (chochLong) {
+      confirmationScore += 1;
+      reasons.push('CHoCH↑');
+    }
+    if (nearOrderBlock) {
+      confirmationScore += 1;
+      reasons.push('OB');
+    }
+    if (fvg) {
+      confirmationScore += 1;
+      reasons.push('FVG');
+    }
+    if (liquiditySweepShort) {
+      confirmationScore += 1;
+      reasons.push('Sweep↓');
+    }
+    if (oiBias > params.threshold * 1.5) {
+      confirmationScore += 1;
+      reasons.push('OI↑');
+    }
+    if (cvdBias > params.threshold * 1.5) {
+      confirmationScore += 1;
+      reasons.push('CVD↑');
+    }
+    if (trendMove < -params.threshold) invalidationScore += 1;
+  } else if (direction === 'SHORT') {
+    if (bosShort) {
+      confirmationScore += 1;
+      reasons.push('BOS↓');
+    }
+    if (chochShort) {
+      confirmationScore += 1;
+      reasons.push('CHoCH↓');
+    }
+    if (nearOrderBlock) {
+      confirmationScore += 1;
+      reasons.push('OB');
+    }
+    if (fvg) {
+      confirmationScore += 1;
+      reasons.push('FVG');
+    }
+    if (liquiditySweepLong) {
+      confirmationScore += 1;
+      reasons.push('Sweep↑');
+    }
+    if (oiBias < -params.threshold * 1.5) {
+      confirmationScore += 1;
+      reasons.push('OI↓');
+    }
+    if (cvdBias < -params.threshold * 1.5) {
+      confirmationScore += 1;
+      reasons.push('CVD↓');
+    }
+    if (trendMove > params.threshold) invalidationScore += 1;
+  }
+
+  return {
+    direction,
+    oiBias,
+    cvdBias,
+    bos: bosLong || bosShort,
+    choch: chochLong || chochShort,
+    orderBlockMid,
+    orderBlockDistance,
+    nearOrderBlock,
+    fvg,
+    liquiditySweep: liquiditySweepLong || liquiditySweepShort,
+    confirmationScore,
+    reasons,
+    invalidationScore,
+  };
+}
+
+function executeSmcStrategy(agent: Agent, allPrices: PriceMap, allHistories: Record<string, number[]>): Partial<Agent> {
+  const params = getStrategyParams(agent);
+  let balance = agent.balance;
+  let trades = [...agent.trades];
+  let status: Agent['status'] = 'IDLE';
+  let positions: Record<string, Position> = Object.fromEntries(
+    Object.entries(agent.activePositions || {}).map(([symbol, pos]) => [
+      symbol,
+      {
+        ...pos,
+        side: pos.side === 'SHORT' ? 'SHORT' : 'LONG',
+      },
+    ]),
+  ) as Record<string, Position>;
+
+  for (const symbol of Object.keys(positions)) {
+    const currentPrice = allPrices[symbol];
+    const history = allHistories[symbol] ?? [];
+    if (!currentPrice) continue;
+
+    const pos = positions[symbol];
+    const pnlPct = pos.side === 'SHORT'
+      ? (pos.avgEntryPrice - currentPrice) / pos.avgEntryPrice
+      : (currentPrice - pos.avgEntryPrice) / pos.avgEntryPrice;
+    const signals = buildSmcSignals(history, currentPrice, params);
+
+    const shouldExitForRisk = pnlPct <= -params.stopLoss || pnlPct >= params.takeProfit;
+    const shouldExitForStructure = signals.direction !== null && signals.direction !== pos.side && signals.choch;
+    const shouldExitForInvalidation = signals.invalidationScore >= 1 && signals.confirmationScore <= 2;
+
+    if (shouldExitForRisk || shouldExitForStructure || shouldExitForInvalidation) {
+      const reason = shouldExitForRisk
+        ? `SMC risk exit | pnl ${(pnlPct * 100).toFixed(2)}%`
+        : `SMC invalidation | ${signals.reasons.join(' + ') || 'structure shift'}`;
+      const result = closePosition(agent, symbol, currentPrice, positions, trades, balance, reason);
+      balance = result.balance;
+      positions = result.positions;
+      trades = result.trades;
+      status = result.status;
+    }
+  }
+
+  const usedMargin = Object.values(positions).reduce((sum, pos) => sum + (pos.amount * pos.avgEntryPrice / pos.leverage), 0);
+  const availableCash = Math.max(0, balance - usedMargin);
+  const preferredSymbols = params.preferredSymbols && params.preferredSymbols.length > 0
+    ? params.preferredSymbols.filter((symbol) => allPrices[symbol])
+    : Object.keys(allPrices);
+
+  const candidates = preferredSymbols
+    .map((symbol) => ({
+      symbol,
+      price: allPrices[symbol],
+      signals: buildSmcSignals(allHistories[symbol] ?? [], allPrices[symbol], params),
+    }))
+    .filter((item) => item.signals.direction !== null)
+    .sort((a, b) => b.signals.confirmationScore - a.signals.confirmationScore)
+    .slice(0, params.scanCount ?? 12);
+
+  for (const candidate of candidates) {
+    if (positions[candidate.symbol]) continue;
+    if (availableCash < 50) break;
+    if (candidate.signals.confirmationScore < (params.confirmationThreshold ?? 4)) continue;
+
+    const side = candidate.signals.direction as Position['side'];
+    const leverage = Math.min(
+      getMaxLeverage(candidate.symbol),
+      Math.max(params.leverageMin ?? 4, Math.round((params.leverageMin ?? 4) + candidate.signals.confirmationScore / 2)),
+      params.leverageMax ?? 8,
+    );
+    const riskBudget = balance * (params.maxRiskPerTrade ?? 0.02);
+    const stopDistance = Math.max(params.stopLoss, candidate.signals.orderBlockDistance || params.stopLoss);
+    const margin = Math.min(availableCash * 0.9, riskBudget / Math.max(stopDistance, 0.004));
+
+    if (margin < 25) continue;
+
+    const reason = [
+      `SMC ${side}`,
+      `OI ${candidate.signals.oiBias > 0 ? 'up' : 'down'}`,
+      `CVD ${candidate.signals.cvdBias > 0 ? 'up' : 'down'}`,
+      candidate.signals.reasons.join(' + '),
+      `OB ${candidate.signals.orderBlockMid.toFixed(4)}`,
+    ].join(' | ');
+
+    const result = openPosition(candidate.symbol, side, candidate.price, leverage, margin, positions, trades, balance, reason);
+    balance = result.balance;
+    positions = result.positions;
+    trades = result.trades;
+    status = result.status;
+    break;
+  }
+
+  const updated = computeEquity(balance, positions, allPrices);
+  const performance = ((updated.equity - BASE_BALANCE) / BASE_BALANCE) * 100;
+
+  return {
+    balance,
+    activePositions: updated.positions,
+    equity: updated.equity,
+    unrealizedPL: updated.totalUnrealizedPL,
+    performance,
+    status,
+    trades,
+    strategyType: 'SMC / CoinAnk',
+    strategy:
+      'SMC 五大核心信號：BOS、CHoCH、Order Block、FVG、Liquidity Sweep，並以 CoinAnk 風格驗證 OI / CVD / 爆倉 / 訂單流代理訊號後分批建倉。',
+    strategyParams: {
+      ...params,
+      logicVersion: SMC_STRATEGY_VERSION,
+    },
+  };
+}
+
+function executeGenericStrategy(agent: Agent, allPrices: PriceMap, allHistories: Record<string, number[]>): Partial<Agent> {
   if (agent.equity <= 0) {
     return {
       status: 'IDLE',
@@ -170,204 +641,103 @@ export const executeStrategy = (
       equity: 0,
       balance: 0,
       unrealizedPL: 0,
-      activePositions: {}
+      activePositions: {},
     };
   }
 
-  let newBalance = agent.balance;
-  // Normalize saved positions (older state may not have `side`)
-  const newActivePositions: Record<string, Position> = Object.fromEntries(
-    Object.entries(agent.activePositions || {}).map(([symbol, pos]) => {
-      const side: Position['side'] = (pos as any).side === 'SHORT' ? 'SHORT' : 'LONG';
-      const normalized: Position = { ...(pos as Position), side };
-      return [symbol, normalized];
-    })
+  let balance = agent.balance;
+  let positions: Record<string, Position> = Object.fromEntries(
+    Object.entries(agent.activePositions || {}).map(([symbol, pos]) => [
+      symbol,
+      {
+        ...pos,
+        side: pos.side === 'SHORT' ? 'SHORT' : 'LONG',
+      },
+    ]),
   ) as Record<string, Position>;
-  const newTrades = [...agent.trades];
-  let newStatus: Agent['status'] = 'IDLE';
+  let trades = [...agent.trades];
+  let status: Agent['status'] = 'IDLE';
+  const params = getStrategyParams(agent);
 
-  // Agent #100 no longer has forced churn logic; it behaves like any other agent.
-
-  // 1. Check existing positions for EXIT signals
-  let currentUsedMargin = Object.values(newActivePositions).reduce((sum, p) => sum + (p.amount * p.avgEntryPrice / p.leverage), 0);
-  
-  Object.keys(newActivePositions).forEach(symbol => {
+  for (const symbol of Object.keys(positions)) {
     const currentPrice = allPrices[symbol];
-    const history = allHistories[symbol] || [];
-    if (!currentPrice) return;
+    const history = allHistories[symbol] ?? [];
+    if (!currentPrice) continue;
 
-    const lastPrice = history[history.length - 1] || currentPrice;
-    const priceChange = (currentPrice - lastPrice) / lastPrice;
-    
-    let shouldExit = false;
-    let reason = '';
+    const pos = positions[symbol];
+    const prevPrice = previousPrice(history, currentPrice);
+    const priceChange = prevPrice === 0 ? 0 : (currentPrice - prevPrice) / prevPrice;
+    const pnlPct = pos.side === 'SHORT'
+      ? (pos.avgEntryPrice - currentPrice) / pos.avgEntryPrice
+      : (currentPrice - pos.avgEntryPrice) / pos.avgEntryPrice;
 
-    // Exit logic based on strategy
-    switch (agent.strategyType) {
-      case '高頻刷單':
-      case '動量策略':
-        if (priceChange < -0.001) { shouldExit = true; reason = '快速止損'; }
-        break;
-      case '趨勢跟隨':
-        if (priceChange < -0.01) { shouldExit = true; reason = '趨勢反轉'; }
-        break;
-      default:
-        if (Math.random() > 0.95) { shouldExit = true; reason = '止盈/隨機退出'; }
-    }
+    const shouldExit = pnlPct <= -params.stopLoss || pnlPct >= params.takeProfit || Math.abs(priceChange) >= params.exitThreshold * 1.2;
 
     if (shouldExit) {
-      const pos = newActivePositions[symbol];
-      const exitValue = pos.amount * currentPrice;
-      const entryValue = pos.amount * pos.avgEntryPrice;
-      const fee = exitValue * FEE_RATE;
-      const pnl =
-        pos.side === 'SHORT'
-          ? (entryValue - exitValue) - fee
-          : (exitValue - entryValue) - fee;
-
-      newBalance += pnl; // Update total balance with realized P&L
-      currentUsedMargin -= (pos.amount * pos.avgEntryPrice / pos.leverage);
-      delete newActivePositions[symbol];
-      // Exit order type depends on side (LONG exits via SELL, SHORT exits via BUY)
-      const exitOrderType = pos.side === 'SHORT' ? 'BUY' : 'SELL';
-      newStatus = exitOrderType === 'BUY' ? 'BUYING' : 'SELLING';
-      newTrades.unshift({
-        id: Math.random().toString(36).substr(2, 9),
-        timestamp: Date.now(),
+      const result = closePosition(
+        agent,
         symbol,
-        type: exitOrderType,
-        action: 'EXIT',
-        positionSide: pos.side,
-        price: currentPrice,
-        amount: pos.amount,
-        fee,
-        realizedPL: pnl,
-        reason: `${reason} | 平倉價格: ${currentPrice.toFixed(2)} | 最終營利: ${pnl.toFixed(2)} USD`
-      });
+        currentPrice,
+        positions,
+        trades,
+        balance,
+        `Generic exit | move ${(priceChange * 100).toFixed(2)}% | pnl ${(pnlPct * 100).toFixed(2)}%`,
+      );
+      balance = result.balance;
+      positions = result.positions;
+      trades = result.trades;
+      status = result.status;
     }
-  });
+  }
 
-  // 2. Look for new ENTRY signals
-  const allSymbols = Object.keys(allPrices);
-  const symbolsToScan = allSymbols.sort(() => 0.5 - Math.random()).slice(0, 15);
-  const availableCash = newBalance - currentUsedMargin;
-  
-  const params = agent.strategyParams || {
-    riskTolerance: 0.1,
-    sensitivity: 1.0,
-    threshold: 0.0005,
-    stopLoss: 0.02,
-    takeProfit: 0.04
-  };
+  const usedMargin = Object.values(positions).reduce((sum, pos) => sum + (pos.amount * pos.avgEntryPrice / pos.leverage), 0);
+  const availableCash = Math.max(0, balance - usedMargin);
+  const symbols = Object.keys(allPrices).sort(() => 0.5 - Math.random()).slice(0, params.scanCount ?? 15);
 
-  symbolsToScan.forEach(symbol => {
-    if (newActivePositions[symbol]) return; 
-    if (availableCash < 50) return; 
+  for (const symbol of symbols) {
+    if (positions[symbol]) continue;
+    if (availableCash < 50) break;
 
     const currentPrice = allPrices[symbol];
-    const history = allHistories[symbol] || [];
-    if (!currentPrice) return;
+    const history = allHistories[symbol] ?? [];
+    const prevPrice = previousPrice(history, currentPrice);
+    const priceChange = prevPrice === 0 ? 0 : (currentPrice - prevPrice) / prevPrice;
 
-    const lastPrice = history[history.length - 1] || currentPrice;
-    const priceChange = (currentPrice - lastPrice) / lastPrice;
-
-    let shouldEntry = false;
+    let shouldEnter = false;
+    let side: Position['side'] = 'LONG';
     let reason = '';
-    let side: 'LONG' | 'SHORT' = 'LONG';
 
-    const threshold = params.threshold; 
-
-    if (Math.abs(priceChange) > threshold) {
-      shouldEntry = true;
+    if (Math.abs(priceChange) > params.threshold) {
+      shouldEnter = true;
       side = priceChange >= 0 ? 'LONG' : 'SHORT';
-      reason = `${symbol} 價格變動 (${(priceChange * 100).toFixed(3)}%) 觸發 ${agent.strategy.split(' (')[0]}`;
-    } else if (Math.random() > 0.998) {
-      shouldEntry = true;
-      // Randomize direction for opportunistic entries
+      reason = `${symbol} momentum break ${(priceChange * 100).toFixed(3)}%`;
+    } else if (Math.random() > 0.9985) {
+      shouldEnter = true;
       side = Math.random() > 0.5 ? 'LONG' : 'SHORT';
-      reason = `策略 ${agent.strategyType} 識別到 ${symbol} 的潛在機會`;
+      reason = `${symbol} opportunistic entry under ${agent.strategyType}`;
     }
 
-    if (shouldEntry) {
-      const confidence = Math.min(Math.max(Math.abs(priceChange) / (0.0005 * params.sensitivity), 0.5), 2.0);
-      const isAggressive = agent.strategyType === '高頻刷單';
-      
-      const maxSymbolLeverage = getMaxLeverage(symbol);
-      let agentLeverage: number;
-      
-      if (isAggressive) {
-        agentLeverage = Math.floor(maxSymbolLeverage * (0.4 + Math.random() * 0.6));
-      } else {
-        agentLeverage = Math.min(Math.floor(3 + Math.random() * 12), maxSymbolLeverage);
-      }
+    if (!shouldEnter) continue;
 
-      let margin: number;
-      if (agent.id >= 0 && agent.id <= 9) {
-        margin = 100;
-      } else if (agent.id >= 10 && agent.id <= 20) {
-        margin = 200;
-      } else {
-        const dynamicRiskFactor = params.riskTolerance * confidence;
-        const finalRiskFactor = Math.min(dynamicRiskFactor, 0.95);
-        margin = newBalance * finalRiskFactor;
-      }
-      
-      // Ensure we don't exceed available cash
-      margin = Math.min(margin, availableCash * 0.95);
-      
-      const notionalValue = margin * agentLeverage;
-      const fee = notionalValue * FEE_RATE;
-      const amount = (notionalValue - fee) / currentPrice;
+    const leverage = Math.min(
+      getMaxLeverage(symbol),
+      Math.max(params.leverageMin ?? 3, Math.round((params.leverageMin ?? 3) + Math.abs(priceChange) * 1000)),
+      params.leverageMax ?? 12,
+    );
+    const margin = Math.min(availableCash * 0.9, balance * Math.min(params.riskTolerance, 0.25));
+    if (margin < 25) continue;
 
-      if (amount > 0) {
-        newBalance -= fee; // Only deduct fee from total balance
-        newActivePositions[symbol] = {
-          symbol,
-          amount,
-          avgEntryPrice: currentPrice,
-          leverage: agentLeverage,
-          unrealizedPL: 0,
-          side
-        };
-        const entryOrderType = side === 'SHORT' ? 'SELL' : 'BUY';
-        newStatus = entryOrderType === 'BUY' ? 'BUYING' : 'SELLING';
-        newTrades.unshift({
-          id: Math.random().toString(36).substr(2, 9),
-          timestamp: Date.now(),
-          symbol,
-          type: entryOrderType,
-          action: 'ENTRY',
-          positionSide: side,
-          price: currentPrice,
-          amount,
-          leverage: agentLeverage,
-          fee,
-          reason
-        });
-      }
-    }
-  });
+    const result = openPosition(symbol, side, currentPrice, leverage, margin, positions, trades, balance, reason);
+    balance = result.balance;
+    positions = result.positions;
+    trades = result.trades;
+    status = result.status;
+  }
 
-  // 3. Update unrealized PL and Equity
-  let totalUnrealizedPL = 0;
-  
-  Object.keys(newActivePositions).forEach(symbol => {
-    const pos = { ...newActivePositions[symbol] };
-    const currentPrice = allPrices[symbol];
-    if (currentPrice) {
-      pos.unrealizedPL =
-        pos.side === 'SHORT'
-          ? (pos.avgEntryPrice - currentPrice) * pos.amount
-          : (currentPrice - pos.avgEntryPrice) * pos.amount;
-      totalUnrealizedPL += pos.unrealizedPL;
-      newActivePositions[symbol] = pos;
-    }
-  });
+  const updated = computeEquity(balance, positions, allPrices);
+  const performance = ((updated.equity - BASE_BALANCE) / BASE_BALANCE) * 100;
 
-  const equity = Math.max(0, newBalance + totalUnrealizedPL);
-  const performance = ((equity - 1000) / 1000) * 100;
-
-  if (equity <= 0) {
+  if (updated.equity <= 0) {
     return {
       balance: 0,
       activePositions: {},
@@ -375,17 +745,30 @@ export const executeStrategy = (
       unrealizedPL: 0,
       performance: -100,
       status: 'IDLE',
-      trades: newTrades.slice(0, 20)
+      trades,
     };
   }
 
   return {
-    balance: newBalance,
-    activePositions: newActivePositions,
-    equity,
-    unrealizedPL: totalUnrealizedPL,
+    balance,
+    activePositions: updated.positions,
+    equity: updated.equity,
+    unrealizedPL: updated.totalUnrealizedPL,
     performance,
-    status: newStatus,
-    trades: newTrades.slice(0, 20)
+    status,
+    trades,
   };
+}
+
+export const executeStrategy = (
+  agent: Agent,
+  allPrices: PriceMap,
+  allHistories: Record<string, number[]>,
+): Partial<Agent> => {
+  if (agent.id === SMC_AGENT_ID) {
+    const smcAgent = applyAgentMigrations([agent])[0];
+    return executeSmcStrategy(smcAgent, allPrices, allHistories);
+  }
+
+  return executeGenericStrategy(agent, allPrices, allHistories);
 };
