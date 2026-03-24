@@ -21,42 +21,45 @@ type SandboxState = {
 
 const STORAGE_KEY = 'selfLearningLabState:v1';
 const TICK_MS = 5000;
+const MAX_REPLAY_AGENTS = 6;
 
 const copy = {
   zh: {
-    heroTitle: '前六名複盤自學',
-    heroBody: '這頁會先複製儀表板資料，再只針對儀表板前六名做獨立複盤與自我學習，不會回寫主儀表板。',
-    heroNote: '排名來源仍跟儀表板一致，但後續策略調整與表現變化只存在這個獨立沙盒。',
-    reset: '重新複製儀表板',
-    totalProfit: '沙盒總獲利',
+    heroTitle: '前六名複盤自學實驗室',
+    heroBody: '這個頁面只會複製儀表板前六名 AI，並在獨立沙盒內做複盤、自我學習與策略微調。',
+    heroNote: '排名來源仍以儀表板為準，但這裡的策略調整、後續績效與學習結果都不會回寫到主儀表板。',
+    reset: '重新複製儀表板前六名',
+    totalProfit: '沙盒獲利',
     winRate: '勝率',
     avgPnl: '平均單筆',
     positions: '持倉',
     learningRounds: '學習輪次',
     strategy: '目前策略',
     review: '複盤檢討',
-    learningAction: '自學調整',
-    strengths: '目前優勢',
-    risks: '目前風險',
-    empty: '目前沒有可複盤的前六名資料。',
+    learningAction: '自我學習調整',
+    strengths: '做得好的地方',
+    risks: '要留意的地方',
+    empty: '目前還沒有可複盤的前六名資料。',
     rank: (value: number) => `第 ${value} 名`,
-    stable: '這個 AI 在沙盒內仍維持正向優勢。',
-    weak: '這個 AI 在沙盒內已出現轉弱跡象，需要重新觀察。',
-    strengthProfit: '目前仍保有正向收益，代表複盤後核心策略還有效。',
-    strengthWinRate: '勝率維持在 50% 以上，出手品質還算穩定。',
-    strengthRisk: '槓桿與持倉數沒有明顯失控。',
-    riskSample: '沙盒學習樣本仍有限，判斷不能過度放大。',
-    riskWinRate: '勝率偏低，最近的優勢可能不夠穩固。',
-    riskLeverage: '平均槓桿偏高，一旦反轉會放大波動。',
-    riskPositions: '同時持有過多部位，資金分散風險上升。',
-    actionDefend: '延續主策略，先保持風控與出場紀律。',
-    actionTune: '降低風險承受，優先微調進場門檻與敏感度。',
+    stable: '這個 AI 在沙盒複盤中仍維持正向優勢。',
+    weak: '這個 AI 在沙盒複盤中出現轉弱跡象，建議再觀察下一輪。',
+    strengthProfit: '目前仍維持正獲利，代表核心策略在複盤後還有延續性。',
+    strengthWinRate: '勝率維持在 50% 以上，執行品質仍在可接受範圍。',
+    strengthRisk: '槓桿與同時持倉數量仍在可控範圍內。',
+    riskSample: '目前沙盒樣本還不大，對策略優勢的判斷要保守。',
+    riskWinRate: '勝率偏低，近期表現可能集中在少數交易。',
+    riskLeverage: '平均槓桿偏高，下一次反轉時回撤可能放大。',
+    riskPositions: '同時持倉偏多，資金分配需要更謹慎。',
+    actionDefend: '先保留主策略，並用更嚴格的出場與風控保護成果。',
+    actionTune: '先降低風險承受，再微調進場門檻與敏感度。',
+    fallbackRisk: '目前沒有明顯結構性風險，但下一輪學習結果仍值得持續觀察。',
+    fallbackLearning: '維持目前調整方向，繼續累積更多複盤樣本再判斷。',
   },
   en: {
-    heroTitle: 'Top 6 Replay And Self-Learning',
-    heroBody: 'This page clones the dashboard state, then runs isolated replay and self-learning only for the current top six agents without writing back to the main dashboard.',
-    heroNote: 'The ranking still comes from the dashboard, but every strategy adjustment and later result lives only inside this sandbox.',
-    reset: 'Reclone Dashboard',
+    heroTitle: 'Top 6 Replay And Self-Learning Lab',
+    heroBody: 'This page clones only the dashboard top six agents, then runs isolated replay, self-learning, and strategy tuning inside its own sandbox.',
+    heroNote: 'The ranking still comes from the dashboard, but every adjustment and later result stays separate from the main dashboard state.',
+    reset: 'Reclone Dashboard Top 6',
     totalProfit: 'Sandbox Profit',
     winRate: 'Win Rate',
     avgPnl: 'Avg Trade',
@@ -67,19 +70,21 @@ const copy = {
     learningAction: 'Self-Learning Adjustment',
     strengths: 'Current strengths',
     risks: 'Current risks',
-    empty: 'No top-six replay data is available yet.',
+    empty: 'No replay data is available for the dashboard top six yet.',
     rank: (value: number) => `Rank #${value}`,
-    stable: 'This AI is still holding an edge inside the sandbox.',
-    weak: 'This AI is weakening inside the sandbox and needs another review pass.',
+    stable: 'This AI is still holding an edge inside the replay sandbox.',
+    weak: 'This AI is weakening inside the replay sandbox and needs another review pass.',
     strengthProfit: 'It still holds positive profit, so the core idea is still working after replay.',
     strengthWinRate: 'Win rate is still above 50%, which keeps execution quality acceptable.',
-    strengthRisk: 'Leverage and position count are still under control.',
+    strengthRisk: 'Leverage and concurrent position count are still under control.',
     riskSample: 'The sandbox learning sample is still limited, so confidence should stay measured.',
     riskWinRate: 'Win rate is soft, so the recent edge may not be stable enough yet.',
     riskLeverage: 'Average leverage is elevated, which can magnify the next reversal.',
     riskPositions: 'Too many concurrent positions can dilute capital control.',
     actionDefend: 'Keep the main strategy and protect it with disciplined exits and risk control.',
     actionTune: 'Reduce risk appetite first, then tune entry thresholds and sensitivity.',
+    fallbackRisk: 'No major structural risk stands out yet, but the next learning round still matters.',
+    fallbackLearning: 'Keep the current tuning direction and gather more replay samples before changing course.',
   },
 } as const;
 
@@ -87,26 +92,33 @@ function cloneAgents(agents: Agent[]) {
   return JSON.parse(JSON.stringify(agents)) as Agent[];
 }
 
+function normalizeAgents(agents: Agent[]) {
+  return getDashboardRankedAgents(cloneAgents(agents)).slice(0, MAX_REPLAY_AGENTS);
+}
+
 function buildInitialState(seedAgents: Agent[], seedPrices: Record<string, number>): SandboxState {
-  const ranked = getDashboardRankedAgents(seedAgents).slice(0, 6);
   return {
     savedAt: Date.now(),
     startedAt: Date.now(),
-    agents: cloneAgents(ranked),
+    agents: normalizeAgents(seedAgents),
     prices: { ...seedPrices },
   };
 }
 
 function parseSavedState(raw: string | null): SandboxState | null {
   if (!raw) return null;
+
   try {
-    const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.agents) || typeof parsed.prices !== 'object') return null;
+    const parsed = JSON.parse(raw) as Partial<SandboxState>;
+    if (!parsed || !Array.isArray(parsed.agents) || !parsed.prices || typeof parsed.prices !== 'object') {
+      return null;
+    }
+
     return {
       savedAt: Number(parsed.savedAt) || Date.now(),
       startedAt: Number(parsed.startedAt) || Date.now(),
-      agents: parsed.agents,
-      prices: parsed.prices,
+      agents: normalizeAgents(parsed.agents as Agent[]),
+      prices: { ...(parsed.prices as Record<string, number>) },
     };
   } catch {
     return null;
@@ -123,6 +135,10 @@ function readStoredSandboxState() {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getActivePositionCount(agent: Agent) {
+  return Object.keys(agent.activePositions ?? {}).length;
 }
 
 function tuneAgentWithLearning(agent: Agent, lang: Language) {
@@ -189,7 +205,7 @@ function buildReplayReview(agent: Agent, lang: Language) {
   if (advice.winRate < 45) risks.push(t.riskWinRate);
   if (advice.avgLeverage >= 8) risks.push(t.riskLeverage);
   if (advice.activePositions >= 4) risks.push(t.riskPositions);
-  if (risks.length === 0) risks.push(lang === 'zh' ? '目前沒有明顯結構性風險，但仍要持續觀察下一輪學習結果。' : 'No major structural risk stands out yet, but the next learning round still matters.');
+  if (risks.length === 0) risks.push(t.fallbackRisk);
 
   return {
     ...advice,
@@ -210,7 +226,7 @@ export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLe
     historyMapRef.current = Object.fromEntries(
       Object.entries(sandbox.prices).map(([symbol, price]) => [symbol, Array.from({ length: 20 }, () => price)])
     );
-  }, []);
+  }, [sandbox.prices]);
 
   useEffect(() => {
     try {
@@ -221,35 +237,49 @@ export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLe
   }, [sandbox]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const interval = window.setInterval(async () => {
-      const allPrices = await fetchAllBybitTickers();
-      if (Object.keys(allPrices).length === 0) return;
+      try {
+        const allPrices = await fetchAllBybitTickers();
+        if (cancelled || Object.keys(allPrices).length === 0) return;
 
-      Object.keys(allPrices).forEach((symbol) => {
-        const currentHistory = historyMapRef.current[symbol] ?? Array.from({ length: 20 }, () => allPrices[symbol]);
-        historyMapRef.current[symbol] = [...currentHistory.slice(-19), allPrices[symbol]];
-      });
+        Object.keys(allPrices).forEach((symbol) => {
+          const seedPrice = allPrices[symbol];
+          const currentHistory = historyMapRef.current[symbol] ?? Array.from({ length: 20 }, () => seedPrice);
+          historyMapRef.current[symbol] = [...currentHistory.slice(-19), seedPrice];
+        });
 
-      tickRef.current += 1;
-      const shouldLearn = tickRef.current % 3 === 0;
+        tickRef.current += 1;
+        const shouldLearn = tickRef.current % 3 === 0;
 
-      setSandbox((prev) => {
-        const simulated = prev.agents.map((agent) => ({ ...agent, ...executeStrategy(agent, allPrices, historyMapRef.current) }));
-        const learned = shouldLearn ? simulated.map((agent) => tuneAgentWithLearning(agent, lang)) : simulated;
-        return {
-          ...prev,
-          prices: allPrices,
-          agents: getDashboardRankedAgents(learned).slice(0, 6),
-          savedAt: Date.now(),
-        };
-      });
+        setSandbox((prev) => {
+          const simulated = prev.agents.map((agent) => ({
+            ...agent,
+            ...executeStrategy(agent, allPrices, historyMapRef.current),
+          }));
+          const learned = shouldLearn ? simulated.map((agent) => tuneAgentWithLearning(agent, lang)) : simulated;
+
+          return {
+            ...prev,
+            savedAt: Date.now(),
+            prices: allPrices,
+            agents: normalizeAgents(learned),
+          };
+        });
+      } catch (error) {
+        console.warn('self-learning sandbox tick failed', error);
+      }
     }, TICK_MS);
 
-    return () => window.clearInterval(interval);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [lang]);
 
   const replayAgents = useMemo(() => {
-    return getDashboardRankedAgents(sandbox.agents).slice(0, 6).map((agent, index) => ({
+    return normalizeAgents(sandbox.agents).map((agent, index) => ({
       agent,
       rank: index + 1,
       review: buildReplayReview(agent, lang),
@@ -323,7 +353,7 @@ export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLe
 
               <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                 <SmallStat label={t.learningRounds} value={Number(agent.strategyParams?.learnRevision ?? 0)} />
-                <SmallStat label={t.positions} value={Object.keys(agent.activePositions).length} />
+                <SmallStat label={t.positions} value={getActivePositionCount(agent)} />
               </div>
 
               <section className="mt-5 rounded-xl border border-sky-500/15 bg-sky-500/5 p-4">
@@ -369,7 +399,9 @@ export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLe
                 <div className="mt-4 rounded-lg border border-white/5 bg-black/20 p-3">
                   <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-white/40">{t.learningAction}</p>
                   <p className="text-sm leading-relaxed text-white/80">
-                    {typeof agent.strategyParams?.learningNote === 'string' ? agent.strategyParams.learningNote : review.action}
+                    {typeof agent.strategyParams?.learningNote === 'string' && agent.strategyParams.learningNote.trim()
+                      ? agent.strategyParams.learningNote
+                      : review.action || t.fallbackLearning}
                   </p>
                 </div>
               </section>
