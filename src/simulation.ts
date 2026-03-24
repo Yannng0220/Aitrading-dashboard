@@ -1,4 +1,4 @@
-import { Agent, Position, Trade } from './types';
+﻿import { Agent, Position, Trade } from './types';
 
 export type PriceMap = Record<string, number>;
 
@@ -31,31 +31,9 @@ const STRATEGY_DESCRIPTIONS = [
   'Force index pressure model.',
 ];
 
-const ADJECTIVES = [
-  '矩陣',
-  '極致',
-  '新星',
-  '雷霆',
-  '向量',
-  '阿爾法',
-  '先鋒',
-  '泰坦',
-  '幽靈',
-  '頂點',
-];
+const ADJECTIVES: string[] = [];
+const NOUNS: string[] = [];
 
-const NOUNS = [
-  '交易員',
-  '節點',
-  '脈衝',
-  '引擎',
-  '行者',
-  '代理',
-  '獵者',
-  '觀測者',
-  '信使',
-  '機器人',
-];
 
 type StrategyParams = {
   logicVersion?: string;
@@ -91,12 +69,8 @@ type SmcSignals = {
   invalidationScore: number;
 };
 
-function randomItem<T>(items: T[]) {
-  return items[Math.floor(Math.random() * items.length)];
-}
-
 function buildGenericName(index: number) {
-  return `${randomItem(ADJECTIVES)} ${randomItem(NOUNS)} #${index + 1}`;
+  return `AI#${index + 1}`;
 }
 
 function getMaxLeverage(symbol: string): number {
@@ -130,10 +104,10 @@ function createSmcAgent(availableSymbols: string[], existingName?: string): Agen
   const preferred = availableSymbols.slice(0, 12);
   return {
     id: SMC_AGENT_ID,
-    name: existingName ?? 'SMC 交易員 #5',
+    name: existingName ?? `AI#${SMC_AGENT_ID + 1}`,
     strategyType: 'SMC / CoinAnk',
     strategy:
-      'SMC 五大核心信號：BOS、CHoCH、Order Block、FVG、Liquidity Sweep，並以 CoinAnk 風格驗證 OI / CVD / 爆倉 / 訂單流代理訊號後分批建倉。',
+      'SMC five-core workflow: BOS, CHoCH, Order Block, FVG, Liquidity Sweep, plus CoinAnk-style OI/CVD/liquidation/orderflow proxy confirmation before layered entries.',
     balance: BASE_BALANCE,
     activePositions: {},
     equity: BASE_BALANCE,
@@ -164,21 +138,22 @@ function createSmcAgent(availableSymbols: string[], existingName?: string): Agen
 
 export function applyAgentMigrations(agents: Agent[], availableSymbols: string[] = DEFAULT_SYMBOLS): Agent[] {
   return agents.map((agent, index) => {
-    if (index !== SMC_AGENT_ID) return agent;
+    if (index !== SMC_AGENT_ID) return { ...agent, name: buildGenericName(index) };
     const params = getStrategyParams(agent);
     if (params.logicVersion === SMC_STRATEGY_VERSION) {
       return {
         ...agent,
+        name: buildGenericName(index),
         strategyType: 'SMC / CoinAnk',
         strategy:
-          'SMC 五大核心信號：BOS、CHoCH、Order Block、FVG、Liquidity Sweep，並以 CoinAnk 風格驗證 OI / CVD / 爆倉 / 訂單流代理訊號後分批建倉。',
+          'SMC five-core workflow: BOS, CHoCH, Order Block, FVG, Liquidity Sweep, plus CoinAnk-style OI/CVD/liquidation/orderflow proxy confirmation before layered entries.',
         strategyParams: {
           ...params,
           logicVersion: SMC_STRATEGY_VERSION,
         },
       };
     }
-    return createSmcAgent(availableSymbols, agent.name || `SMC 交易員 #${SMC_AGENT_ID + 1}`);
+    return createSmcAgent(availableSymbols, buildGenericName(index));
   });
 }
 
@@ -445,11 +420,11 @@ function buildSmcSignals(history: number[], currentPrice: number, params: Strate
   if (direction === 'LONG') {
     if (bosLong) {
       confirmationScore += 1;
-      reasons.push('BOS↑');
+      reasons.push('BOS up');
     }
     if (chochLong) {
       confirmationScore += 1;
-      reasons.push('CHoCH↑');
+      reasons.push('CHoCH up');
     }
     if (nearOrderBlock) {
       confirmationScore += 1;
@@ -461,25 +436,25 @@ function buildSmcSignals(history: number[], currentPrice: number, params: Strate
     }
     if (liquiditySweepShort) {
       confirmationScore += 1;
-      reasons.push('Sweep↓');
+      reasons.push('Sweep down');
     }
     if (oiBias > params.threshold * 1.5) {
       confirmationScore += 1;
-      reasons.push('OI↑');
+      reasons.push('OI up');
     }
     if (cvdBias > params.threshold * 1.5) {
       confirmationScore += 1;
-      reasons.push('CVD↑');
+      reasons.push('CVD up');
     }
     if (trendMove < -params.threshold) invalidationScore += 1;
   } else if (direction === 'SHORT') {
     if (bosShort) {
       confirmationScore += 1;
-      reasons.push('BOS↓');
+      reasons.push('BOS down');
     }
     if (chochShort) {
       confirmationScore += 1;
-      reasons.push('CHoCH↓');
+      reasons.push('CHoCH down');
     }
     if (nearOrderBlock) {
       confirmationScore += 1;
@@ -491,15 +466,15 @@ function buildSmcSignals(history: number[], currentPrice: number, params: Strate
     }
     if (liquiditySweepLong) {
       confirmationScore += 1;
-      reasons.push('Sweep↑');
+      reasons.push('Sweep up');
     }
     if (oiBias < -params.threshold * 1.5) {
       confirmationScore += 1;
-      reasons.push('OI↓');
+      reasons.push('OI down');
     }
     if (cvdBias < -params.threshold * 1.5) {
       confirmationScore += 1;
-      reasons.push('CVD↓');
+      reasons.push('CVD down');
     }
     if (trendMove > params.threshold) invalidationScore += 1;
   }
@@ -625,7 +600,7 @@ function executeSmcStrategy(agent: Agent, allPrices: PriceMap, allHistories: Rec
     trades,
     strategyType: 'SMC / CoinAnk',
     strategy:
-      'SMC 五大核心信號：BOS、CHoCH、Order Block、FVG、Liquidity Sweep，並以 CoinAnk 風格驗證 OI / CVD / 爆倉 / 訂單流代理訊號後分批建倉。',
+      'SMC five-core workflow: BOS, CHoCH, Order Block, FVG, Liquidity Sweep, plus CoinAnk-style OI/CVD/liquidation/orderflow proxy confirmation before layered entries.',
     strategyParams: {
       ...params,
       logicVersion: SMC_STRATEGY_VERSION,
