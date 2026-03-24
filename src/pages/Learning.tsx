@@ -284,11 +284,7 @@ export default function Learning({ agents, onOpenAgent, lang }: LearningProps) {
 
     const agentAdvice = agents
       .map((agent) => buildAgentRecommendation(agent, lang))
-      .sort((a, b) => {
-        if (b.totalPnl !== a.totalPnl) return b.totalPnl - a.totalPnl;
-        if (b.avgPnl !== a.avgPnl) return b.avgPnl - a.avgPnl;
-        return b.closedTrades - a.closedTrades;
-      });
+      .sort((a, b) => a.id - b.id);
 
     const suggestions: string[] = [];
     if (closedTrades.length === 0) {
