@@ -460,51 +460,104 @@ export default function App() {
     ],
   };
   const locale = lang === 'en' ? 'en-US' : 'zh-TW';
-  const display = {
-    simulationBannerTitle: 'Simulation Environment Notice',
-    simulationBannerBody: 'This interface shows trading simulations and strategy observations only. It does not connect to a live brokerage account or execute real orders on your behalf.',
-    simulationBannerNote: 'Treat the performance, positions, and recommendations shown here as educational simulation output, not as an investment promise or profit guarantee.',
-    statsAgents: 'AI Agents',
-    statsEquity: 'Total Equity',
-    statsLatency: 'System Latency',
-    statsUptime: 'Uptime',
-    statsLatencyTrend: 'Stable',
-    statsUptimeTrend: 'Running',
-    tickerTitle: 'Bybit Market Prices',
-    tickerLive: 'Live',
-    agentsPanelTitle: 'AI Agent List',
-    agentsSearchPlaceholder: 'Search agents or strategies...',
-    positionsCount: 'Positions',
-    equityLabel: 'Equity',
-    unrealizedPnlLabel: 'Unrealized PnL',
-    showingAgents: (count: number) => `Showing top 12 of ${count} agents`,
-    topPerformers: 'Top Performers',
-    liquidatedAgents: (count: number) => `Liquidated Agents (${count})`,
-    agentDetailTitle: 'Agent Detail',
-    openPositions: 'Open Positions',
-    currentUnrealized: 'Current Unrealized PnL',
-    leverageLabel: 'Leverage',
-    quantityLabel: 'Quantity',
-    marginLabel: 'Margin',
-    noOpenPositions: 'No open positions right now.',
-    recentTrades: 'Recent Trade History',
-    recentTradesLimit: 'Last 20',
-    feeLabel: 'Fee',
-    realizedPnlLabel: 'Realized PnL',
-    noTrades: 'No trades have been recorded yet.',
-    strategyOverview: 'Strategy Overview',
-    strategyConfidenceText: 'Current strategy type:',
-    strategyConfidenceSuffix: 'with a simulated confidence score of',
-    emptySelectionTitle: 'No Agent Selected',
-    emptySelectionBody: 'Choose an AI from the list or selector to inspect positions, trade history, and strategy notes.',
-    systemLogs: 'System Logs',
-    logs: [
-      'System ready. 100 AI agents are active.',
-      'Latency check completed in 1.2ms.',
-      'Market feed connected through WebSocket.',
-      'Risk monitor detected 7 high-volatility symbols.',
-    ],
-  };
+  const display = lang === 'zh'
+    ? {
+        simulationBannerTitle: '模擬環境提示',
+        simulationBannerBody: '這個介面只顯示交易模擬與策略觀察，不會連接真實券商帳戶，也不會替你執行真實下單。',
+        simulationBannerNote: '這裡顯示的績效、持倉與建議都屬於教育用途的模擬輸出，不代表投資承諾或獲利保證。',
+        statsAgents: 'AI 代理數',
+        statsEquity: '總資產',
+        statsLatency: '系統延遲',
+        statsUptime: '運行時間',
+        statsLatencyTrend: '穩定',
+        statsUptimeTrend: '運行中',
+        tickerTitle: 'Bybit 市場報價',
+        tickerLive: '即時',
+        agentsPanelTitle: 'AI 代理列表',
+        agentsSearchPlaceholder: '搜尋代理名稱或策略...',
+        positionsCount: '持倉',
+        positionLong: '多單',
+        positionShort: '空單',
+        equityLabel: '權益',
+        unrealizedPnlLabel: '浮動盈虧',
+        showingAgents: (count: number) => `目前顯示前 12 / 共 ${count} 個 AI`,
+        topPerformers: '績效排行榜',
+        liquidatedAgents: (count: number) => `已歸零代理 (${count})`,
+        agentDetailTitle: '代理詳情',
+        openPositions: '目前持倉',
+        currentUnrealized: '當前浮動盈虧',
+        leverageLabel: '槓桿',
+        quantityLabel: '數量',
+        marginLabel: '保證金',
+        noOpenPositions: '目前沒有持倉。',
+        recentTrades: '最近交易紀錄',
+        recentTradesLimit: '最近 20 筆',
+        feeLabel: '手續費',
+        realizedPnlLabel: '已實現盈虧',
+        noTrades: '目前還沒有交易紀錄。',
+        strategyOverview: '策略概況',
+        strategyConfidenceText: '目前策略類型為',
+        strategyConfidenceSuffix: '，模擬信心分數為',
+        emptySelectionTitle: '尚未選擇 AI',
+        emptySelectionBody: '請從列表或上方選單挑選一個 AI，查看它的持倉、交易紀錄與策略說明。',
+        systemLogs: '系統日誌',
+        logs: [
+          '系統已就緒，100 個 AI 代理正在運作。',
+          '延遲檢查已在 1.2ms 內完成。',
+          '市場資料已透過 WebSocket 連線。',
+          '風險監控偵測到 7 個高波動標的。',
+        ],
+      }
+    : {
+        simulationBannerTitle: 'Simulation Environment Notice',
+        simulationBannerBody: 'This interface shows trading simulations and strategy observations only. It does not connect to a live brokerage account or execute real orders on your behalf.',
+        simulationBannerNote: 'Treat the performance, positions, and recommendations shown here as educational simulation output, not as an investment promise or profit guarantee.',
+        statsAgents: 'AI Agents',
+        statsEquity: 'Total Equity',
+        statsLatency: 'System Latency',
+        statsUptime: 'Uptime',
+        statsLatencyTrend: 'Stable',
+        statsUptimeTrend: 'Running',
+        tickerTitle: 'Bybit Market Prices',
+        tickerLive: 'Live',
+        agentsPanelTitle: 'AI Agent List',
+        agentsSearchPlaceholder: 'Search agents or strategies...',
+        positionsCount: 'Positions',
+        positionLong: 'Long',
+        positionShort: 'Short',
+        equityLabel: 'Equity',
+        unrealizedPnlLabel: 'Unrealized PnL',
+        showingAgents: (count: number) => `Showing top 12 of ${count} agents`,
+        topPerformers: 'Top Performers',
+        liquidatedAgents: (count: number) => `Liquidated Agents (${count})`,
+        agentDetailTitle: 'Agent Detail',
+        openPositions: 'Open Positions',
+        currentUnrealized: 'Current Unrealized PnL',
+        leverageLabel: 'Leverage',
+        quantityLabel: 'Quantity',
+        marginLabel: 'Margin',
+        noOpenPositions: 'No open positions right now.',
+        recentTrades: 'Recent Trade History',
+        recentTradesLimit: 'Last 20',
+        feeLabel: 'Fee',
+        realizedPnlLabel: 'Realized PnL',
+        noTrades: 'No trades have been recorded yet.',
+        strategyOverview: 'Strategy Overview',
+        strategyConfidenceText: 'Current strategy type:',
+        strategyConfidenceSuffix: 'with a simulated confidence score of',
+        emptySelectionTitle: 'No Agent Selected',
+        emptySelectionBody: 'Choose an AI from the list or selector to inspect positions, trade history, and strategy notes.',
+        systemLogs: 'System Logs',
+        logs: [
+          'System ready. 100 AI agents are active.',
+          'Latency check completed in 1.2ms.',
+          'Market feed connected through WebSocket.',
+          'Risk monitor detected 7 high-volatility symbols.',
+        ],
+      };
+  const sideLabel = (side: Position['side']) => (side === 'SHORT' ? display.positionShort : display.positionLong);
+  const tradeActionLabel = (action: Trade['action']) => (lang === 'zh' ? (action === 'ENTRY' ? '進場' : '平倉') : action);
+  const tradeTypeLabel = (type: Trade['type']) => (lang === 'zh' ? (type === 'BUY' ? '買入' : '賣出') : type);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#e0e0e0] font-sans selection:bg-emerald-500/30">
@@ -736,12 +789,12 @@ export default function App() {
                             </span>
                             {(Object.values(agent.activePositions) as Position[]).some((pos) => pos.side === 'LONG') && (
                               <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400">
-                                LONG
+                                {display.positionLong}
                               </span>
                             )}
                             {(Object.values(agent.activePositions) as Position[]).some((pos) => pos.side === 'SHORT') && (
                               <span className="rounded border border-rose-500/20 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-rose-400">
-                                SHORT
+                                {display.positionShort}
                               </span>
                             )}
                           </div>
@@ -891,7 +944,7 @@ export default function App() {
                                     ? 'border-rose-500/20 bg-rose-500/10 text-rose-400'
                                     : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
                                 )}>
-                                  {pos.side}
+                                  {sideLabel(pos.side)}
                                 </span>
                                 <span className="rounded bg-emerald-500/10 px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-500">
                                   {pos.leverage}x {display.leverageLabel}
@@ -934,7 +987,7 @@ export default function App() {
                                   'rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider',
                                   trade.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
                                 )}>
-                                  {trade.symbol} {trade.action} {trade.type} {trade.leverage && `${trade.leverage}x`}
+                                  {trade.symbol} {tradeActionLabel(trade.action)} {tradeTypeLabel(trade.type)} {trade.leverage && `${trade.leverage}x`}
                                 </span>
                                 <span className="text-xs font-mono font-medium text-white">${trade.price.toLocaleString(locale)}</span>
                               </div>
