@@ -19,6 +19,7 @@ import {
   ShieldAlert,
   BrainCircuit,
   LayoutDashboard,
+  BadgeDollarSign,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -27,6 +28,7 @@ import { Agent, MarketData, Trade, Position } from './types';
 import { generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
 import Learning from './pages/Learning';
 import LearningAgentDetail from './pages/LearningAgentDetail';
+import TopProfit from './pages/TopProfit';
 import type { Language } from './pages/Learning';
 
 const AGENT_COUNT = 100;
@@ -404,6 +406,8 @@ export default function App() {
   const learningAgentId = learningAgentMatch ? Number(learningAgentMatch[1]) : null;
   const currentPage = learningAgentId !== null
     ? 'learning-agent'
+    : location.pathname === '/top-profit'
+      ? 'top-profit'
     : location.pathname === '/about'
       ? 'about'
       : location.pathname === '/privacy'
@@ -417,6 +421,7 @@ export default function App() {
   const ui = {
     navDashboard: 'Dashboard',
     navLearning: 'Learning',
+    navTopProfit: 'Top Profit',
     liveEngine: 'Live Market Engine',
     selectorPlaceholder: 'Select AI',
     selectorSearch: 'Search by name or strategy...',
@@ -597,6 +602,18 @@ export default function App() {
                 <BrainCircuit className="h-3.5 w-3.5" />
                 {ui.navLearning}
               </button>
+              <button
+                onClick={() => navigate('/top-profit')}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                  currentPage === 'top-profit'
+                    ? 'bg-amber-500/10 text-amber-300'
+                    : 'text-white/50 hover:text-white'
+                )}
+              >
+                <BadgeDollarSign className="h-3.5 w-3.5" />
+                {ui.navTopProfit}
+              </button>
             </div>
 
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-[10px] font-bold tracking-widest uppercase">
@@ -688,6 +705,8 @@ export default function App() {
         <Learning agents={agents} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} lang={lang} />
       ) : currentPage === 'learning-agent' ? (
         <LearningAgentDetail agent={selectedLearningAgent} onBack={() => navigate('/learning')} lang={lang} />
+      ) : currentPage === 'top-profit' ? (
+        <TopProfit agents={agents} lang={lang} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} />
       ) : currentPage === 'about' ? (
         <StaticPage
           title={ui.aboutTitle}
