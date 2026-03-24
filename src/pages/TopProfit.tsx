@@ -3,6 +3,7 @@ import { ArrowRight, BadgeDollarSign, Bot, BrainCircuit, ShieldAlert, TrendingUp
 import { Agent, Trade } from '../types';
 import { buildAgentRecommendation, type Language } from './Learning';
 import { cn } from '../lib/utils';
+import { getDashboardRankedAgents } from '../lib/ranking';
 
 type TopProfitProps = {
   agents: Agent[];
@@ -23,9 +24,9 @@ type RankedAgent = ReturnType<typeof buildAgentRecommendation> & {
 const copy = {
   zh: {
     heroTitle: '前六名營利 AI',
-    heroBody: '這個頁面會挑出目前總獲利最高的六個 AI，集中顯示它們的策略、表現重點與檢討內容。',
-    heroNote: '排序依已實現總獲利由高到低，方便你快速查看目前最會賺的模型。',
-    empty: '目前還沒有可列入排行榜的營利 AI，等更多平倉資料產生後會出現在這裡。',
+    heroBody: '這個頁面直接沿用儀表板的排行，挑出目前前六名 AI，集中顯示它們的策略、表現重點與檢討內容。',
+    heroNote: '排序完全跟儀表板一致，避免不同頁面各自計算後出現不一致。',
+    empty: '目前還沒有可顯示的儀表板排行資料。',
     totalProfit: '總獲利',
     winRate: '勝率',
     avgPnl: '平均單筆',
@@ -51,9 +52,9 @@ const copy = {
   },
   en: {
     heroTitle: 'Top 6 Profitable AI',
-    heroBody: 'This page highlights the six AI agents with the highest realized profit and summarizes their strategy and review notes.',
-    heroNote: 'Ranking is based on realized total profit from highest to lowest so you can inspect the current leaders quickly.',
-    empty: 'No profitable AI agents are available yet. Once more trades close in profit, they will appear here.',
+    heroBody: 'This page follows the same ranking as the dashboard leaderboard and expands the current top six AI agents with strategy and review notes.',
+    heroNote: 'Ranking is inherited from the dashboard so the order stays consistent across pages.',
+    empty: 'No dashboard-ranked AI agents are available yet.',
     totalProfit: 'Total Profit',
     winRate: 'Win Rate',
     avgPnl: 'Avg Trade',
@@ -114,15 +115,9 @@ export default function TopProfit({ agents, lang, onOpenAgent }: TopProfitProps)
   const t = copy[lang];
 
   const rankedAgents = useMemo(() => {
-    return agents
-      .map((agent) => buildReview(agent, lang))
-      .filter((agent) => agent.totalPnl > 0)
-      .sort((a, b) => {
-        if (b.totalPnl !== a.totalPnl) return b.totalPnl - a.totalPnl;
-        if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-        return a.id - b.id;
-      })
-      .slice(0, 6);
+    return getDashboardRankedAgents(agents)
+      .slice(0, 6)
+      .map((agent) => buildReview(agent, lang));
   }, [agents, lang]);
 
   return (

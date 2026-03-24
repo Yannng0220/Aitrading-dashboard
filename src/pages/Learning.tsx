@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { Bot, BrainCircuit, ChevronRight, Lightbulb, TrendingDown, TrendingUp, TriangleAlert } from 'lucide-react';
 import { Agent, Trade } from '../types';
 import { cn } from '../lib/utils';
+import { compareAgentsByDashboardRank } from '../lib/ranking';
 
 export type Language = 'zh' | 'en';
 
@@ -284,7 +285,12 @@ export default function Learning({ agents, onOpenAgent, lang }: LearningProps) {
 
     const agentAdvice = agents
       .map((agent) => buildAgentRecommendation(agent, lang))
-      .sort((a, b) => a.id - b.id);
+      .sort((a, b) => {
+        const agentA = agents.find((agent) => agent.id === a.id);
+        const agentB = agents.find((agent) => agent.id === b.id);
+        if (!agentA || !agentB) return a.id - b.id;
+        return compareAgentsByDashboardRank(agentA, agentB);
+      });
 
     const suggestions: string[] = [];
     if (closedTrades.length === 0) {

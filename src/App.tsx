@@ -24,6 +24,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from './lib/utils';
+import { compareAgentsByDashboardRank, getDashboardRankedAgents } from './lib/ranking';
 import { Agent, MarketData, Trade, Position } from './types';
 import { generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
 import Learning from './pages/Learning';
@@ -395,11 +396,11 @@ export default function App() {
         a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         a.strategyType.toLowerCase().includes(searchTerm.toLowerCase())
       )
-      .sort((a, b) => b.performance - a.performance);
+      .sort(compareAgentsByDashboardRank);
   }, [agents, searchTerm]);
 
-  const topPerformers = agents.slice().sort((a, b) => b.performance - a.performance).slice(0, 5);
-  const liquidatedAgents = agents.filter(a => a.equity <= 0).sort((a, b) => b.performance - a.performance);
+  const topPerformers = getDashboardRankedAgents(agents).slice(0, 5);
+  const liquidatedAgents = agents.filter(a => a.equity <= 0).sort(compareAgentsByDashboardRank);
   const totalEquity = agents.reduce((sum, a) => sum + a.equity, 0);
   const avgPerformance = agents.reduce((sum, a) => sum + a.performance, 0) / AGENT_COUNT;
   const learningAgentMatch = location.pathname.match(/^\/learning\/agent\/(\d+)$/);
