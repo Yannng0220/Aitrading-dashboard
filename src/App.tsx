@@ -30,6 +30,7 @@ import { generateAgents, executeStrategy, fetchAllBybitTickers } from './simulat
 import Learning from './pages/Learning';
 import LearningAgentDetail from './pages/LearningAgentDetail';
 import TopProfit from './pages/TopProfit';
+import SelfLearningLab from './pages/SelfLearningLab';
 import type { Language } from './pages/Learning';
 
 const AGENT_COUNT = 100;
@@ -409,6 +410,8 @@ export default function App() {
     ? 'learning-agent'
     : location.pathname === '/top-profit'
       ? 'top-profit'
+    : location.pathname === '/self-learning-lab'
+      ? 'self-learning-lab'
     : location.pathname === '/about'
       ? 'about'
       : location.pathname === '/privacy'
@@ -423,6 +426,7 @@ export default function App() {
     navDashboard: 'Dashboard',
     navLearning: 'Learning',
     navTopProfit: 'Top Profit',
+    navSelfLearningLab: 'Self Learning',
     liveEngine: 'Live Market Engine',
     selectorPlaceholder: 'Select AI',
     selectorSearch: 'Search by name or strategy...',
@@ -615,6 +619,18 @@ export default function App() {
                 <BadgeDollarSign className="h-3.5 w-3.5" />
                 {ui.navTopProfit}
               </button>
+              <button
+                onClick={() => navigate('/self-learning-lab')}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                  currentPage === 'self-learning-lab'
+                    ? 'bg-emerald-500/10 text-emerald-300'
+                    : 'text-white/50 hover:text-white'
+                )}
+              >
+                <BrainCircuit className="h-3.5 w-3.5" />
+                {ui.navSelfLearningLab}
+              </button>
             </div>
 
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-[10px] font-bold tracking-widest uppercase">
@@ -708,6 +724,8 @@ export default function App() {
         <LearningAgentDetail agent={selectedLearningAgent} onBack={() => navigate('/learning')} lang={lang} />
       ) : currentPage === 'top-profit' ? (
         <TopProfit agents={agents} lang={lang} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} />
+      ) : currentPage === 'self-learning-lab' ? (
+        <SelfLearningLab seedAgents={agents} seedPrices={prices} lang={lang} />
       ) : currentPage === 'about' ? (
         <StaticPage
           title={ui.aboutTitle}
