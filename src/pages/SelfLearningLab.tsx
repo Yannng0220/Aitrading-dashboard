@@ -113,6 +113,14 @@ function parseSavedState(raw: string | null): SandboxState | null {
   }
 }
 
+function readStoredSandboxState() {
+  try {
+    return parseSavedState(localStorage.getItem(STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -172,7 +180,7 @@ function buildReplayReview(agent: Agent, lang: Language) {
       trade.action === 'EXIT' && typeof trade.realizedPL === 'number'
   );
 
-  const strengths = [t.strengthProfit];
+  const strengths: string[] = [t.strengthProfit];
   if (advice.winRate >= 50) strengths.push(t.strengthWinRate);
   if (advice.avgLeverage <= 6 && advice.activePositions <= 3) strengths.push(t.strengthRisk);
 
@@ -194,7 +202,7 @@ function buildReplayReview(agent: Agent, lang: Language) {
 
 export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLearningLabProps) {
   const t = copy[lang];
-  const [sandbox, setSandbox] = useState<SandboxState>(() => parseSavedState(localStorage.getItem(STORAGE_KEY)) ?? buildInitialState(seedAgents, seedPrices));
+  const [sandbox, setSandbox] = useState<SandboxState>(() => readStoredSandboxState() ?? buildInitialState(seedAgents, seedPrices));
   const historyMapRef = useRef<Record<string, number[]>>({});
   const tickRef = useRef(0);
 
@@ -205,7 +213,11 @@ export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLe
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...sandbox, savedAt: Date.now() }));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...sandbox, savedAt: Date.now() }));
+    } catch (error) {
+      console.warn('self-learning sandbox write failed', error);
+    }
   }, [sandbox]);
 
   useEffect(() => {
