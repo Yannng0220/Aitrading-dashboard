@@ -422,53 +422,101 @@ export default function App() {
 
   const selectedAgent = selectedAgentId !== null ? agents.find(a => a.id === selectedAgentId) : null;
   const selectedLearningAgent = learningAgentId !== null ? agents.find((agent) => agent.id === learningAgentId) ?? null : null;
-  const ui = {
-    navDashboard: 'Dashboard',
-    navLearning: 'Learning',
-    navTopProfit: 'Top Profit',
-    navSelfLearningLab: 'Self Learning',
-    liveEngine: 'Live Market Engine',
-    selectorPlaceholder: 'Select AI',
-    selectorSearch: 'Search by name or strategy...',
-    marketStatusLabel: 'Market Status',
-    marketStatusValue: 'Multi-Asset',
-    footerAbout: 'About',
-    footerPrivacy: 'Privacy',
-    footerDashboard: 'Dashboard',
-    footerCopyright: '© 2026 Yang-RotBot Trading Simulation Trading Environment',
-    aboutTitle: 'About Yang-RotBot Trading',
-    aboutDescription: 'Yang-RotBot Trading is a browser-based trading simulation dashboard built to demonstrate multi-agent strategy behavior, interface design, and educational market analysis.',
-    aboutSections: [
-      {
-        heading: 'Purpose of the site',
-        body: 'This website presents simulated agents, portfolio changes, strategy logs, and learning suggestions so visitors can understand how trading rules behave over time in a controlled environment.',
-      },
-      {
-        heading: 'Nature of the information',
-        body: 'All data, performance results, and strategy insights shown on this site are part of a simulation. They do not constitute investment advice, trading advice, or any guarantee of real-world financial results.',
-      },
-      {
-        heading: 'Publisher content',
-        body: 'This page exists to clearly explain the product, the simulation scope, and the educational purpose of the dashboard so that visitors can understand what the site is about beyond the live interface.',
-      },
-    ],
-    privacyTitle: 'Privacy Policy',
-    privacyDescription: 'This website may store limited browser data and process operational requests needed to render the dashboard, maintain synchronization, and deliver server-side features.',
-    privacySections: [
-      {
-        heading: 'Browser storage',
-        body: 'The site may store local identifiers, interface state, and simulation snapshots in browser storage so pages can recover correctly after refresh and maintain cross-session continuity.',
-      },
-      {
-        heading: 'Cloudflare processing',
-        body: 'Requests may be handled by Cloudflare Pages, Workers, Durable Objects, KV, and related logging services for routing, synchronization, reliability, and performance.',
-      },
-      {
-        heading: 'Advertising and third parties',
-        body: 'If advertising or analytics services are enabled, those providers may apply their own policies and data handling practices. The site owner should disclose any active third-party services accordingly.',
-      },
-    ],
-  };
+  const ui = lang === 'zh'
+    ? {
+        navDashboard: '儀表板',
+        navLearning: '學習頁',
+        navTopProfit: '高獲利榜',
+        navSelfLearningLab: '自學實驗室',
+        liveEngine: '即時市場引擎',
+        selectorPlaceholder: '選擇 AI',
+        selectorSearch: '搜尋名稱或策略...',
+        marketStatusLabel: '市場狀態',
+        marketStatusValue: '多資產',
+        footerAbout: '關於',
+        footerPrivacy: '隱私',
+        footerDashboard: '儀表板',
+        footerCopyright: '© 2026 Yang-RotBot Trading 模擬交易環境',
+        aboutTitle: '關於 Yang-RotBot Trading',
+        aboutDescription: 'Yang-RotBot Trading 是一個以瀏覽器為基礎的交易模擬儀表板，用來展示多代理策略行為、介面設計，以及教育用途的市場分析。',
+        aboutSections: [
+          {
+            heading: '網站用途',
+            body: '本站展示模擬代理、資產變化、策略日誌與學習建議，讓訪客可以在可控環境中理解交易規則如何隨時間運作。',
+          },
+          {
+            heading: '資訊性質',
+            body: '本站顯示的所有資料、績效結果與策略洞察都屬於模擬內容，不構成投資建議、交易建議，也不保證真實世界的金融結果。',
+          },
+          {
+            heading: '內容說明',
+            body: '此頁面用來清楚說明產品定位、模擬範圍與教育目的，讓訪客不只看到即時介面，也能理解網站提供的內容。',
+          },
+        ],
+        privacyTitle: '隱私政策',
+        privacyDescription: '本站可能會儲存有限的瀏覽器資料，並處理呈現儀表板、維持同步與提供伺服器功能所需的請求。',
+        privacySections: [
+          {
+            heading: '瀏覽器儲存',
+            body: '網站可能會在瀏覽器中保存裝置識別、介面狀態與模擬快照，讓頁面重新整理後能正確恢復並維持跨工作階段連續性。',
+          },
+          {
+            heading: 'Cloudflare 處理',
+            body: '本站請求可能由 Cloudflare Pages、Workers、Durable Objects、KV 與相關記錄服務處理，以支援路由、同步、可靠性與效能。',
+          },
+          {
+            heading: '廣告與第三方服務',
+            body: '如果啟用廣告或分析服務，相關供應商可能會依其自身政策處理資料。站主應額外揭露任何啟用中的第三方服務。',
+          },
+        ],
+      }
+    : {
+        navDashboard: 'Dashboard',
+        navLearning: 'Learning',
+        navTopProfit: 'Top Profit',
+        navSelfLearningLab: 'Self Learning',
+        liveEngine: 'Live Market Engine',
+        selectorPlaceholder: 'Select AI',
+        selectorSearch: 'Search by name or strategy...',
+        marketStatusLabel: 'Market Status',
+        marketStatusValue: 'Multi-Asset',
+        footerAbout: 'About',
+        footerPrivacy: 'Privacy',
+        footerDashboard: 'Dashboard',
+        footerCopyright: '© 2026 Yang-RotBot Trading Simulation Trading Environment',
+        aboutTitle: 'About Yang-RotBot Trading',
+        aboutDescription: 'Yang-RotBot Trading is a browser-based trading simulation dashboard built to demonstrate multi-agent strategy behavior, interface design, and educational market analysis.',
+        aboutSections: [
+          {
+            heading: 'Purpose of the site',
+            body: 'This website presents simulated agents, portfolio changes, strategy logs, and learning suggestions so visitors can understand how trading rules behave over time in a controlled environment.',
+          },
+          {
+            heading: 'Nature of the information',
+            body: 'All data, performance results, and strategy insights shown on this site are part of a simulation. They do not constitute investment advice, trading advice, or any guarantee of real-world financial results.',
+          },
+          {
+            heading: 'Publisher content',
+            body: 'This page exists to clearly explain the product, the simulation scope, and the educational purpose of the dashboard so that visitors can understand what the site is about beyond the live interface.',
+          },
+        ],
+        privacyTitle: 'Privacy Policy',
+        privacyDescription: 'This website may store limited browser data and process operational requests needed to render the dashboard, maintain synchronization, and deliver server-side features.',
+        privacySections: [
+          {
+            heading: 'Browser storage',
+            body: 'The site may store local identifiers, interface state, and simulation snapshots in browser storage so pages can recover correctly after refresh and maintain cross-session continuity.',
+          },
+          {
+            heading: 'Cloudflare processing',
+            body: 'Requests may be handled by Cloudflare Pages, Workers, Durable Objects, KV, and related logging services for routing, synchronization, reliability, and performance.',
+          },
+          {
+            heading: 'Advertising and third parties',
+            body: 'If advertising or analytics services are enabled, those providers may apply their own policies and data handling practices. The site owner should disclose any active third-party services accordingly.',
+          },
+        ],
+      };
   const locale = lang === 'en' ? 'en-US' : 'zh-TW';
   const display = lang === 'zh'
     ? {
