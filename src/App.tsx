@@ -462,6 +462,7 @@ function AppContent() {
         navDashboard: '儀表板',
         navLearning: '學習頁',
         navSelfLearningLab: 'AI 自學實驗室',
+        navSelfLearningLabMobile: '自學實驗室',
         liveEngine: '即時市場引擎',
         selectorPlaceholder: '選擇 AI',
         selectorSearch: '搜尋名稱或策略...',
@@ -508,6 +509,7 @@ function AppContent() {
         navDashboard: 'Dashboard',
         navLearning: 'Learning',
         navSelfLearningLab: 'AI Lab',
+        navSelfLearningLabMobile: 'AI Lab',
         liveEngine: 'Live Market Engine',
         selectorPlaceholder: 'Select AI',
         selectorSearch: 'Search by name or strategy...',
@@ -659,42 +661,43 @@ function AppContent() {
           </div>
 
           <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:flex-nowrap md:gap-6">
-            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1 order-first w-full md:order-none md:w-auto">
+            <div className="order-first grid w-full grid-cols-3 gap-1 rounded-full border border-white/10 bg-white/5 p-1 md:order-none md:flex md:w-auto md:items-center md:gap-2">
               <button
                 onClick={() => navigate('/')}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3',
                   currentPage === 'dashboard'
                     ? 'bg-emerald-500/10 text-emerald-400'
                     : 'text-white/50 hover:text-white'
                 )}
               >
-                <LayoutDashboard className="h-3.5 w-3.5" />
-                {ui.navDashboard}
+                <LayoutDashboard className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+                <span className="truncate">{ui.navDashboard}</span>
               </button>
               <button
                 onClick={() => navigate('/learning')}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3',
                   currentPage === 'learning' || currentPage === 'learning-agent'
                     ? 'bg-sky-500/10 text-sky-300'
                     : 'text-white/50 hover:text-white'
                 )}
               >
-                <BrainCircuit className="h-3.5 w-3.5" />
-                {ui.navLearning}
+                <BrainCircuit className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+                <span className="truncate">{ui.navLearning}</span>
               </button>
               <button
                 onClick={() => navigate('/self-learning-lab')}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3',
                   currentPage === 'self-learning-lab'
                     ? 'bg-emerald-500/10 text-emerald-300'
                     : 'text-white/50 hover:text-white'
                 )}
               >
-                <BrainCircuit className="h-3.5 w-3.5" />
-                {ui.navSelfLearningLab}
+                <BrainCircuit className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+                <span className="truncate sm:hidden">{ui.navSelfLearningLabMobile}</span>
+                <span className="hidden truncate sm:inline">{ui.navSelfLearningLab}</span>
               </button>
             </div>
 
