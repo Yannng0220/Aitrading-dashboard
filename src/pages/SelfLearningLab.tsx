@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, BrainCircuit, History, Info, RefreshCw, Send, ShieldAlert, TrendingUp } from 'lucide-react';
+import { Bot, BrainCircuit, History, Info, Send, ShieldAlert, TrendingUp } from 'lucide-react';
 import { Agent, Position, Trade } from '../types';
 import { executeStrategy, fetchAllBybitTickers } from '../simulation';
 import { cn } from '../lib/utils';
@@ -34,7 +34,6 @@ const copy = {
     heroTitle: 'AI 自學實驗室',
     heroBody: '這一頁只運行 AI#101。它會讀取學習頁整理好的融合模型，並用獨立的 1000 USD 沙盒資金持續驗證成效。',
     heroNote: 'AI#101 的策略、績效、持倉與交易都只存在這個實驗室，不會改動主儀表板的 100 個 AI 數據。',
-    reset: '重置 AI#101 沙盒',
     waiting: '目前還沒有學習模型可供 AI#101 使用，請先到學習頁累積來源 AI 的平倉資料。',
     totalProfit: 'AI#101 沙盒獲利',
     winRate: '勝率',
@@ -75,7 +74,6 @@ const copy = {
     heroTitle: 'AI Self-Learning Lab',
     heroBody: 'This page runs AI#101 only. It reads the unified model generated on the learning page and validates it with an isolated 1000 USD sandbox balance.',
     heroNote: 'AI#101 strategy, performance, positions, and trades live only inside this lab and never modify the main dashboard 100-agent dataset.',
-    reset: 'Reset AI#101 Sandbox',
     waiting: 'No learning model is available for AI#101 yet. Visit the learning page first so source agents can build more closed-trade history.',
     totalProfit: 'AI#101 Sandbox Profit',
     winRate: 'Win Rate',
@@ -364,12 +362,6 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
     [sandbox.agent.trades]
   );
 
-  const resetSandbox = () => {
-    const latestModel = readLearningModel();
-    setModel(latestModel);
-    setSandbox(buildInitialState(latestModel, seedPrices));
-  };
-
   if (!model) {
     return (
       <main className="mx-auto max-w-[1600px] space-y-6 p-4 sm:p-6">
@@ -393,24 +385,15 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
   return (
     <main className="mx-auto max-w-[1600px] space-y-6 p-4 sm:p-6">
       <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-emerald-50 shadow-[0_0_30px_rgba(16,185,129,0.08)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-emerald-400/15 p-2 text-emerald-300">
-              <BrainCircuit className="h-5 w-5" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-bold tracking-wide text-emerald-100">{t.heroTitle}</p>
-              <p className="text-sm leading-relaxed text-emerald-50/90">{t.heroBody}</p>
-              <p className="text-xs leading-relaxed text-emerald-100/70">{t.heroNote}</p>
-            </div>
+        <div className="flex items-start gap-3">
+          <div className="rounded-xl bg-emerald-400/15 p-2 text-emerald-300">
+            <BrainCircuit className="h-5 w-5" />
           </div>
-          <button
-            onClick={resetSandbox}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white/80 transition-colors hover:bg-white/10"
-          >
-            <RefreshCw className="h-4 w-4" />
-            {t.reset}
-          </button>
+          <div className="space-y-1">
+            <p className="text-sm font-bold tracking-wide text-emerald-100">{t.heroTitle}</p>
+            <p className="text-sm leading-relaxed text-emerald-50/90">{t.heroBody}</p>
+            <p className="text-xs leading-relaxed text-emerald-100/70">{t.heroNote}</p>
+          </div>
         </div>
       </section>
 
