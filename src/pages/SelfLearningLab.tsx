@@ -22,7 +22,7 @@ type Ai101State = {
   agent: Agent;
 };
 
-const STORAGE_KEY = 'ai101SandboxState:v1';
+const STORAGE_KEY = 'ai101SandboxState:v2';
 const AI_101_ID = 100;
 const STARTING_BALANCE = 1000;
 const TICK_MS = 5000;
@@ -180,6 +180,7 @@ function parseState(raw: string | null, model: LearningModel | null): Ai101State
     if (!parsed || !parsed.agent || !parsed.prices || typeof parsed.prices !== 'object') return null;
 
     const nextAgent = model ? applyModelToAi101(parsed.agent as Agent, model) : (parsed.agent as Agent);
+    if (Object.keys(nextAgent.activePositions ?? {}).length > MAX_AI101_POSITIONS) return null;
 
     return {
       savedAt: Number(parsed.savedAt) || Date.now(),
