@@ -19,6 +19,7 @@ import {
   ShieldAlert,
   BrainCircuit,
   LayoutDashboard,
+  X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -423,6 +424,13 @@ export default function App() {
 
   const selectedAgent = selectedAgentId !== null ? agents.find(a => a.id === selectedAgentId) : null;
   const selectedLearningAgent = learningAgentId !== null ? agents.find((agent) => agent.id === learningAgentId) ?? null : null;
+
+  useEffect(() => {
+    if (currentPage !== 'dashboard') {
+      setSelectedAgentId(null);
+    }
+  }, [currentPage]);
+
   const ui = lang === 'zh'
     ? {
         navDashboard: '儀表板',
@@ -1144,6 +1152,153 @@ export default function App() {
         </div>
       </main>
       )}
+
+      <AnimatePresence>
+        {currentPage === 'dashboard' && selectedAgent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm"
+            onClick={() => setSelectedAgentId(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ duration: 0.18 }}
+              className="mx-auto mt-6 max-h-[calc(100vh-3rem)] w-[min(1100px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-emerald-500/30 bg-[#111] p-4 shadow-[0_0_60px_rgba(16,185,129,0.16)] sm:mt-10 sm:p-6"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-emerald-500">
+                  <Cpu className="w-4 h-4" /> {display.agentDetailTitle}
+                </h2>
+                <button
+                  onClick={() => setSelectedAgentId(null)}
+                  className="rounded-full border border-white/10 bg-white/5 p-2 text-white/40 transition-colors hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10">
+                    <div className="h-6 w-6 rounded-full" style={{ backgroundColor: selectedAgent.color }} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold leading-tight text-white">{selectedAgent.name}</h3>
+                    <p className="text-xs font-mono italic text-white/40">{selectedAgent.strategy}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                  <QuickDetailStat label={display.equityLabel} value={`$${selectedAgent.equity.toLocaleString(locale, { maximumFractionDigits: 0 })}`} />
+                  <QuickDetailStat
+                    label={display.unrealizedPnlLabel}
+                    value={`${selectedAgent.unrealizedPL >= 0 ? '+' : ''}$${selectedAgent.unrealizedPL.toFixed(2)}`}
+                    tone={selectedAgent.unrealizedPL >= 0 ? 'emerald' : 'rose'}
+                  />
+                  <QuickDetailStat label={display.positionsCount} value={Object.keys(selectedAgent.activePositions).length} />
+                  <QuickDetailStat
+                    label={display.recentTrades}
+                    value={selectedAgent.trades.length}
+                  />
+                </div>
+
+                <div className="space-y-4 rounded-xl border border-white/5 bg-black/40 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase text-white/30">{display.openPositions}</p>
+                    <p className="text-[10px] font-bold uppercase text-white/30">
+                      {display.currentUnrealized}:
+                      <span className={cn('ml-2 font-mono', selectedAgent.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                        {selectedAgent.unrealizedPL >= 0 ? '+' : ''}${selectedAgent.unrealizedPL.toFixed(2)}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    {Object.values(selectedAgent.activePositions).length > 0 ? (
+                      Object.values(selectedAgent.activePositions).map((pos: Position) => (
+                        <div key={pos.symbol} className="flex flex-col gap-3 rounded-lg border border-white/5 bg-white/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-xs font-bold text-white">{pos.symbol}</p>
+                              <span className={cn(
+                                'rounded border px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest',
+                                pos.side === 'SHORT'
+                                  ? 'border-rose-500/20 bg-rose-500/10 text-rose-400'
+                                  : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
+                              )}>
+                                {sideLabel(pos.side)}
+                              </span>
+                              <span className="rounded bg-emerald-500/10 px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-500">
+                                {pos.leverage}x {display.leverageLabel}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-white/40">{display.quantityLabel} {pos.amount.toFixed(4)} @ ${pos.avgEntryPrice.toLocaleString(locale)}</p>
+                          </div>
+                          <div className="text-left sm:text-right">
+                            <p className="text-xs font-mono text-emerald-400">${(prices[pos.symbol] || 0).toLocaleString(locale)}</p>
+                            <p className={cn('text-[10px] font-mono', pos.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                              {pos.unrealizedPL >= 0 ? '+' : ''}${pos.unrealizedPL.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="py-4 text-center text-[10px] italic text-white/20">{display.noOpenPositions}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="flex items-center gap-2 text-[10px] font-bold uppercase text-white/30">
+                      <History className="w-3 h-3" /> {display.recentTrades}
+                    </p>
+                    <span className="text-[8px] uppercase text-white/20">{display.recentTradesLimit}</span>
+                  </div>
+
+                  <div className="max-h-[360px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                    {selectedAgent.trades.length > 0 ? (
+                      selectedAgent.trades.slice(0, 20).map((trade) => (
+                        <div key={trade.id} className="rounded-xl border border-white/5 bg-black/40 p-3">
+                          <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={cn(
+                                'rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider',
+                                trade.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                              )}>
+                                {trade.symbol} {tradeActionLabel(trade.action)} {tradeTypeLabel(trade.type)} {trade.leverage && `${trade.leverage}x`}
+                              </span>
+                              <span className="text-xs font-mono font-medium text-white">${trade.price.toLocaleString(locale)}</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-white/20">
+                              {new Date(trade.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <Info className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500/40" />
+                            <p className="text-[11px] italic leading-relaxed text-white/60">{trade.reason}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="space-y-3 py-12 text-center">
+                        <Activity className="mx-auto h-8 w-8 text-white/5" />
+                        <p className="text-[10px] italic text-white/20">{display.noTrades}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Footer */}
       <footer className="max-w-[1600px] mx-auto px-6 py-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
         <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">{ui.footerCopyright}</p>
@@ -1175,6 +1330,30 @@ function StatCard({ label, value, icon, trend, trendUp }: { label: string, value
       </div>
       <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">{label}</p>
       <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
+    </div>
+  );
+}
+
+function QuickDetailStat({
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string | number;
+  tone?: 'neutral' | 'emerald' | 'rose';
+}) {
+  return (
+    <div className="rounded-xl border border-white/5 bg-black/30 p-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">{label}</p>
+      <p
+        className={cn(
+          'mt-2 text-lg font-mono font-bold',
+          tone === 'emerald' ? 'text-emerald-400' : tone === 'rose' ? 'text-rose-400' : 'text-white'
+        )}
+      >
+        {value}
+      </p>
     </div>
   );
 }
