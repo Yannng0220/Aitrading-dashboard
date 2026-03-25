@@ -802,8 +802,8 @@ function AppContent() {
           sections={ui.privacySections}
         />
       ) : (
-      <main className="max-w-[1600px] mx-auto grid grid-cols-12 gap-4 p-4 sm:gap-6 sm:p-6">
-        <div className="col-span-12 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.08)] sm:px-5">
+      <main className="mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6">
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-amber-100 shadow-[0_0_30px_rgba(245,158,11,0.08)] sm:px-5">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 rounded-xl bg-amber-400/15 p-2 text-amber-300">
               <ShieldAlert className="h-5 w-5" />
@@ -816,7 +816,7 @@ function AppContent() {
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-8 space-y-6">
+        <div className="space-y-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
             <StatCard label={display.statsAgents} value={AGENT_COUNT} icon={<Users className="w-4 h-4" />} trend="+0" />
             <StatCard
@@ -879,7 +879,7 @@ function AppContent() {
           <div className="space-y-4">
             <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
               <h2 className="text-sm font-bold uppercase tracking-widest text-white/60">{display.agentsPanelTitle}</h2>
-              <div className="relative w-full sm:w-64">
+              <div className="relative w-full sm:w-72 lg:w-80">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/20" />
                 <input
                   type="text"
@@ -891,7 +891,7 @@ function AppContent() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               <AnimatePresence mode="popLayout">
                 {filteredAgents.slice(0, 12).map((agent) => (
                   <motion.button
