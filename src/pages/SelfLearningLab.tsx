@@ -5,6 +5,7 @@ import { executeStrategy, fetchAllBybitTickers } from '../simulation';
 import { cn } from '../lib/utils';
 import {
   buildAgentRecommendation,
+  LEARNING_MODEL_STORAGE_KEY,
   readLearningModel,
   type Language,
   type LearningModel,
@@ -22,7 +23,7 @@ type Ai101State = {
   agent: Agent;
 };
 
-const STORAGE_KEY = 'ai101SandboxState:v2';
+const STORAGE_KEY = 'ai101SandboxState:v3';
 const AI_101_ID = 100;
 const STARTING_BALANCE = 1000;
 const TICK_MS = 5000;
@@ -263,7 +264,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
     });
 
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== null && event.key !== 'learningModel:v1') return;
+      if (event.key !== null && event.key !== LEARNING_MODEL_STORAGE_KEY) return;
       const latest = readLearningModel();
       setModel(latest);
       setSandbox((prev) => {

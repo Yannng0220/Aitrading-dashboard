@@ -50,7 +50,7 @@ export type LearningModel = {
   };
 };
 
-export const LEARNING_MODEL_STORAGE_KEY = 'learningModel:v1';
+export const LEARNING_MODEL_STORAGE_KEY = 'learningModel:v2';
 const MAX_SOURCE_AGENTS = 6;
 
 function clamp(value: number, min: number, max: number) {
@@ -311,5 +311,13 @@ export function writeLearningModel(model: LearningModel) {
     localStorage.setItem(LEARNING_MODEL_STORAGE_KEY, JSON.stringify(model));
   } catch (error) {
     console.warn('learning model write failed', error);
+  }
+}
+
+export function clearLearningModel() {
+  try {
+    localStorage.removeItem(LEARNING_MODEL_STORAGE_KEY);
+  } catch (error) {
+    console.warn('learning model clear failed', error);
   }
 }

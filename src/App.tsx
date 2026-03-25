@@ -24,7 +24,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from './lib/utils';
-import { buildUnifiedLearningModel, type Language, writeLearningModel } from './lib/learningLab';
+import { buildUnifiedLearningModel, clearLearningModel, type Language, writeLearningModel } from './lib/learningLab';
 import { compareAgentsByDashboardRank, getDashboardRankedAgents } from './lib/ranking';
 import { Agent, MarketData, Trade, Position } from './types';
 import { applyAgentMigrations, generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
@@ -392,7 +392,12 @@ export default function App() {
 
   useEffect(() => {
     if (!isHydrated || agents.length !== AGENT_COUNT) return;
-    writeLearningModel(buildUnifiedLearningModel(agents, lang));
+    const learningModel = buildUnifiedLearningModel(agents, lang);
+    if (learningModel.closedTradesReviewed > 0) {
+      writeLearningModel(learningModel);
+    } else {
+      clearLearningModel();
+    }
   }, [agents, isHydrated, lang]);
 
   const filteredAgents = useMemo(() => {
