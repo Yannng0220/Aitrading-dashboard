@@ -6,3 +6,9 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-display: "Space Grotesk", sans-serif;
 }
+
+@media (min-width: 768px) {
+  html {
+    font-size: 17px;
+  }
+}
