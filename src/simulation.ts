@@ -51,6 +51,7 @@ type StrategyParams = {
   orderBlockTolerance?: number;
   preferredSymbols?: string[];
   scanCount?: number;
+  maxConcurrentPositions?: number;
 };
 
 type SmcSignals = {
@@ -96,6 +97,7 @@ function getStrategyParams(agent: Agent): StrategyParams {
     orderBlockTolerance: params.orderBlockTolerance ?? 0.004,
     preferredSymbols: params.preferredSymbols ?? [],
     scanCount: params.scanCount ?? 15,
+    maxConcurrentPositions: params.maxConcurrentPositions ?? 99,
     logicVersion: params.logicVersion,
   };
 }
@@ -132,6 +134,7 @@ function createSmcAgent(availableSymbols: string[], existingName?: string): Agen
       orderBlockTolerance: 0.0035,
       preferredSymbols: preferred,
       scanCount: 12,
+      maxConcurrentPositions: 5,
     },
   };
 }
@@ -215,6 +218,7 @@ export const generateAgents = (count: number, availableSymbols: string[] = DEFAU
         leverageMin: 3,
         leverageMax: 12,
         maxRiskPerTrade: 0.03,
+        maxConcurrentPositions: 99,
       },
     };
   });
@@ -540,6 +544,28 @@ function executeSmcStrategy(agent: Agent, allPrices: PriceMap, allHistories: Rec
 
   const usedMargin = Object.values(positions).reduce((sum, pos) => sum + (pos.amount * pos.avgEntryPrice / pos.leverage), 0);
   const availableCash = Math.max(0, balance - usedMargin);
+  const maxConcurrentPositions = params.maxConcurrentPositions ?? 99;
+  if (Object.keys(positions).length >= maxConcurrentPositions) {
+    const updated = computeEquity(balance, positions, allPrices);
+    const performance = ((updated.equity - BASE_BALANCE) / BASE_BALANCE) * 100;
+
+    return {
+      balance,
+      activePositions: updated.positions,
+      equity: updated.equity,
+      unrealizedPL: updated.totalUnrealizedPL,
+      performance,
+      status,
+      trades,
+      strategyType: 'SMC / CoinAnk',
+      strategy:
+        'SMC five-core workflow: BOS, CHoCH, Order Block, FVG, Liquidity Sweep, plus CoinAnk-style OI/CVD/liquidation/orderflow proxy confirmation before layered entries.',
+      strategyParams: {
+        ...params,
+        logicVersion: SMC_STRATEGY_VERSION,
+      },
+    };
+  }
   const preferredSymbols = params.preferredSymbols && params.preferredSymbols.length > 0
     ? params.preferredSymbols.filter((symbol) => allPrices[symbol])
     : Object.keys(allPrices);
@@ -667,6 +693,21 @@ function executeGenericStrategy(agent: Agent, allPrices: PriceMap, allHistories:
 
   const usedMargin = Object.values(positions).reduce((sum, pos) => sum + (pos.amount * pos.avgEntryPrice / pos.leverage), 0);
   const availableCash = Math.max(0, balance - usedMargin);
+  const maxConcurrentPositions = params.maxConcurrentPositions ?? 99;
+  if (Object.keys(positions).length >= maxConcurrentPositions) {
+    const updated = computeEquity(balance, positions, allPrices);
+    const performance = ((updated.equity - BASE_BALANCE) / BASE_BALANCE) * 100;
+
+    return {
+      balance,
+      activePositions: updated.positions,
+      equity: updated.equity,
+      unrealizedPL: updated.totalUnrealizedPL,
+      performance,
+      status,
+      trades,
+    };
+  }
   const symbols = Object.keys(allPrices).sort(() => 0.5 - Math.random()).slice(0, params.scanCount ?? 15);
 
   for (const symbol of symbols) {

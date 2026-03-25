@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bot, BrainCircuit, History, Info, RefreshCw, Send, ShieldAlert, TrendingUp } from 'lucide-react';
-import { Agent, Trade } from '../types';
+import { Agent, Position, Trade } from '../types';
 import { executeStrategy, fetchAllBybitTickers } from '../simulation';
 import { cn } from '../lib/utils';
 import {
@@ -26,6 +26,8 @@ const STORAGE_KEY = 'ai101SandboxState:v1';
 const AI_101_ID = 100;
 const STARTING_BALANCE = 1000;
 const TICK_MS = 5000;
+const MIN_MODEL_SAMPLE_SIZE = 12;
+const MAX_AI101_POSITIONS = 5;
 
 const copy = {
   zh: {
@@ -46,13 +48,12 @@ const copy = {
     sourceTrades: '來源平倉數',
     transferStatus: '模型傳送狀態',
     transferReady: '已接收最新模型',
-    transferPending: '等待模型',
     openPositionsTitle: 'AI#101 目前持倉',
     entryLogicTitle: 'AI#101 開單邏輯',
     entryReasonTitle: 'AI#101 為什麼開單',
     noOpenPositions: 'AI#101 目前沒有持倉。',
     noEntryReasons: '目前還沒有新的進場單，等 AI#101 開第一筆單後就會顯示原因。',
-    quantity: '數量',
+    positionSize: '艙位大小',
     leverage: '槓桿',
     entryPrice: '進場價',
     marketPrice: '現價',
@@ -61,7 +62,9 @@ const copy = {
     modelThreshold: '進場門檻',
     modelExit: '出場門檻',
     modelRisk: '單筆風險',
-    latestEntries: '最近進場單',
+    sampleGate: '開單樣本門檻',
+    maxPositions: '最多持倉數',
+    waitingForSample: `來源平倉樣本未達 ${MIN_MODEL_SAMPLE_SIZE} 筆前，AI#101 只會等待，不會開單。`,
     reviewStable: 'AI#101 目前仍能依照融合模型維持正向表現。',
     reviewWeak: 'AI#101 目前表現轉弱，代表融合模型仍需要更多來源樣本。',
     strengths: '目前做得好的地方',
@@ -86,13 +89,12 @@ const copy = {
     sourceTrades: 'Source Closed Trades',
     transferStatus: 'Model Transfer Status',
     transferReady: 'Latest model received',
-    transferPending: 'Waiting for model',
     openPositionsTitle: 'AI#101 Open Positions',
     entryLogicTitle: 'AI#101 Entry Logic',
     entryReasonTitle: 'Why AI#101 Opened The Trade',
     noOpenPositions: 'AI#101 has no open positions right now.',
     noEntryReasons: 'There are no fresh entry orders yet. The reason panel will fill in after AI#101 opens a trade.',
-    quantity: 'Quantity',
+    positionSize: 'Position Size',
     leverage: 'Leverage',
     entryPrice: 'Entry Price',
     marketPrice: 'Market Price',
@@ -101,7 +103,9 @@ const copy = {
     modelThreshold: 'Entry Threshold',
     modelExit: 'Exit Threshold',
     modelRisk: 'Risk Per Trade',
-    latestEntries: 'Latest Entry Orders',
+    sampleGate: 'Sample Gate',
+    maxPositions: 'Max Positions',
+    waitingForSample: `AI#101 stays idle until source closed trades reach ${MIN_MODEL_SAMPLE_SIZE}.`,
     reviewStable: 'AI#101 is still maintaining a positive edge under the unified model.',
     reviewWeak: 'AI#101 is weakening, which means the unified model still needs more source data.',
     strengths: 'Current strengths',
@@ -141,6 +145,7 @@ function buildAi101Agent(model: LearningModel | null, seedPrices: Record<string,
       leverageMax: model?.params.leverageMax ?? 10,
       maxRiskPerTrade: model?.params.maxRiskPerTrade ?? 0.02,
       scanCount: model?.params.scanCount ?? 10,
+      maxConcurrentPositions: MAX_AI101_POSITIONS,
       preferredSymbols,
       learningModelFingerprint: model?.sourceFingerprint ?? 'none',
       learnRevision: 0,
@@ -159,6 +164,7 @@ function applyModelToAi101(agent: Agent, model: LearningModel) {
       ...model.params,
       timeframe: 'SHORT',
       preferredSymbols: model.params.preferredSymbols,
+      maxConcurrentPositions: MAX_AI101_POSITIONS,
       learningModelFingerprint: model.sourceFingerprint,
       learningNote: model.transferNote,
       learnRevision: Number(agent.strategyParams?.learnRevision ?? 0) + 1,
@@ -166,7 +172,7 @@ function applyModelToAi101(agent: Agent, model: LearningModel) {
   };
 }
 
-function parseState(raw: string | null, model: LearningModel | null, seedPrices: Record<string, number>): Ai101State | null {
+function parseState(raw: string | null, model: LearningModel | null): Ai101State | null {
   if (!raw) return null;
 
   try {
@@ -186,9 +192,9 @@ function parseState(raw: string | null, model: LearningModel | null, seedPrices:
   }
 }
 
-function readAi101State(model: LearningModel | null, seedPrices: Record<string, number>) {
+function readAi101State(model: LearningModel | null) {
   try {
-    return parseState(localStorage.getItem(STORAGE_KEY), model, seedPrices);
+    return parseState(localStorage.getItem(STORAGE_KEY), model);
   } catch {
     return null;
   }
@@ -231,18 +237,24 @@ function buildReview(agent: Agent, lang: Language) {
   };
 }
 
+function getPositionSize(position: Position) {
+  return position.amount * position.avgEntryPrice / position.leverage;
+}
+
 export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabProps) {
   const t = copy[lang];
   const [model, setModel] = useState<LearningModel | null>(() => readLearningModel());
-  const [sandbox, setSandbox] = useState<Ai101State>(() => readAi101State(readLearningModel(), seedPrices) ?? buildInitialState(readLearningModel(), seedPrices));
+  const [sandbox, setSandbox] = useState<Ai101State>(() => {
+    const initialModel = readLearningModel();
+    return readAi101State(initialModel) ?? buildInitialState(initialModel, seedPrices);
+  });
   const historyMapRef = useRef<Record<string, number[]>>({});
 
   useEffect(() => {
     const nextModel = readLearningModel();
     setModel(nextModel);
     setSandbox((prev) => {
-      if (!nextModel) return prev;
-      if (prev.appliedFingerprint === nextModel.sourceFingerprint) return prev;
+      if (!nextModel || prev.appliedFingerprint === nextModel.sourceFingerprint) return prev;
       return {
         ...prev,
         savedAt: Date.now(),
@@ -256,8 +268,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
       const latest = readLearningModel();
       setModel(latest);
       setSandbox((prev) => {
-        if (!latest) return prev;
-        if (prev.appliedFingerprint === latest.sourceFingerprint) return prev;
+        if (!latest || prev.appliedFingerprint === latest.sourceFingerprint) return prev;
         return {
           ...prev,
           savedAt: Date.now(),
@@ -308,15 +319,23 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
         });
 
         setSandbox((prev) => {
+          const activeModel = latestModel ?? model;
           const agentWithLatestModel =
             latestModel && prev.appliedFingerprint !== latestModel.sourceFingerprint
               ? applyModelToAi101(prev.agent, latestModel)
               : prev.agent;
 
-          const updatedAgent = {
-            ...agentWithLatestModel,
-            ...executeStrategy(agentWithLatestModel, allPrices, historyMapRef.current),
-          };
+          const shouldTrade = Boolean(activeModel && activeModel.closedTradesReviewed >= MIN_MODEL_SAMPLE_SIZE);
+
+          const updatedAgent = shouldTrade
+            ? {
+                ...agentWithLatestModel,
+                ...executeStrategy(agentWithLatestModel, allPrices, historyMapRef.current),
+              }
+            : {
+                ...agentWithLatestModel,
+                status: 'IDLE' as Agent['status'],
+              };
 
           return {
             ...prev,
@@ -332,7 +351,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
     }, TICK_MS);
 
     return () => window.clearInterval(interval);
-  }, [sandbox.appliedFingerprint]);
+  }, [sandbox.appliedFingerprint, model]);
 
   const review = useMemo(() => buildReview(sandbox.agent, lang), [sandbox.agent, lang]);
   const openPositions = useMemo(() => Object.values(sandbox.agent.activePositions ?? {}), [sandbox.agent.activePositions]);
@@ -470,6 +489,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
             <div className="space-y-3">
               {openPositions.map((position) => {
                 const marketPrice = sandbox.prices[position.symbol] ?? position.avgEntryPrice;
+                const positionSize = getPositionSize(position);
                 return (
                   <div key={position.symbol} className="rounded-xl border border-white/5 bg-black/30 p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -488,7 +508,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
                           </span>
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-3">
-                          <SmallStat label={t.quantity} value={position.amount.toFixed(4)} />
+                          <SmallStat label={t.positionSize} value={`$${positionSize.toFixed(2)}`} />
                           <SmallStat label={t.leverage} value={`${position.leverage}x`} />
                           <SmallStat label={t.entryPrice} value={`$${position.avgEntryPrice.toLocaleString()}`} />
                           <SmallStat label={t.marketPrice} value={`$${marketPrice.toLocaleString()}`} />
@@ -526,7 +546,13 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
               <SmallStat label={t.modelThreshold} value={model.params.threshold.toFixed(4)} />
               <SmallStat label={t.modelExit} value={model.params.exitThreshold.toFixed(4)} />
               <SmallStat label={t.modelRisk} value={`${(model.params.maxRiskPerTrade * 100).toFixed(1)}%`} />
+              <SmallStat label={t.sampleGate} value={`${model.closedTradesReviewed}/${MIN_MODEL_SAMPLE_SIZE}`} />
+              <SmallStat label={t.maxPositions} value={MAX_AI101_POSITIONS} />
               <SmallStat label={t.preferredSymbols} value={model.params.preferredSymbols.slice(0, 4).join(', ') || '-'} />
+            </div>
+
+            <div className="rounded-lg border border-amber-500/10 bg-amber-500/5 px-3 py-2 text-sm text-white/75">
+              {t.waitingForSample}
             </div>
 
             {model.entryFocus.map((item) => (
