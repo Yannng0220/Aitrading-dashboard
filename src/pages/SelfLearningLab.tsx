@@ -1,226 +1,245 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BrainCircuit, RefreshCw, ShieldAlert, TrendingUp, TriangleAlert } from 'lucide-react';
+import { Bot, BrainCircuit, RefreshCw, Send, ShieldAlert, TrendingUp } from 'lucide-react';
 import { Agent, Trade } from '../types';
-import { getDashboardRankedAgents } from '../lib/ranking';
-import { buildAgentRecommendation, type Language } from './Learning';
 import { executeStrategy, fetchAllBybitTickers } from '../simulation';
 import { cn } from '../lib/utils';
+import {
+  buildAgentRecommendation,
+  readLearningModel,
+  type Language,
+  type LearningModel,
+} from '../lib/learningLab';
 
 type SelfLearningLabProps = {
-  seedAgents: Agent[];
   seedPrices: Record<string, number>;
   lang: Language;
 };
 
-type SandboxState = {
+type Ai101State = {
   savedAt: number;
-  startedAt: number;
-  agents: Agent[];
   prices: Record<string, number>;
+  appliedFingerprint: string;
+  agent: Agent;
 };
 
-const STORAGE_KEY = 'selfLearningLabState:v1';
+const STORAGE_KEY = 'ai101SandboxState:v1';
+const AI_101_ID = 100;
+const STARTING_BALANCE = 1000;
 const TICK_MS = 5000;
-const MAX_REPLAY_AGENTS = 6;
 
 const copy = {
   zh: {
-    heroTitle: '前六名複盤自學實驗室',
-    heroBody: '這個頁面只會複製儀表板前六名 AI，並在獨立沙盒內做複盤、自我學習與策略微調。',
-    heroNote: '排名來源仍以儀表板為準，但這裡的策略調整、後續績效與學習結果都不會回寫到主儀表板。',
-    reset: '重新複製儀表板前六名',
-    totalProfit: '沙盒獲利',
+    heroTitle: 'AI 自學實驗室',
+    heroBody: '這一頁只運行 AI#101。它會讀取學習頁整理好的融合模型，並用獨立的 1000 USD 沙盒資金持續驗證成效。',
+    heroNote: 'AI#101 的策略、績效、持倉與交易都只存在這個實驗室，不會改動主儀表板的 100 個 AI 數據。',
+    reset: '重置 AI#101 沙盒',
+    waiting: '目前還沒有學習模型可供 AI#101 使用，請先到學習頁累積來源 AI 的平倉資料。',
+    totalProfit: 'AI#101 沙盒獲利',
     winRate: '勝率',
     avgPnl: '平均單筆',
     positions: '持倉',
-    learningRounds: '學習輪次',
-    strategy: '目前策略',
-    review: '複盤檢討',
-    learningAction: '自我學習調整',
-    strengths: '做得好的地方',
-    risks: '要留意的地方',
-    empty: '目前還沒有可複盤的前六名資料。',
-    rank: (value: number) => `第 ${value} 名`,
-    stable: '這個 AI 在沙盒複盤中仍維持正向優勢。',
-    weak: '這個 AI 在沙盒複盤中出現轉弱跡象，建議再觀察下一輪。',
-    strengthProfit: '目前仍維持正獲利，代表核心策略在複盤後還有延續性。',
-    strengthWinRate: '勝率維持在 50% 以上，執行品質仍在可接受範圍。',
-    strengthRisk: '槓桿與同時持倉數量仍在可控範圍內。',
-    riskSample: '目前沙盒樣本還不大，對策略優勢的判斷要保守。',
-    riskWinRate: '勝率偏低，近期表現可能集中在少數交易。',
-    riskLeverage: '平均槓桿偏高，下一次反轉時回撤可能放大。',
-    riskPositions: '同時持倉偏多，資金分配需要更謹慎。',
-    actionDefend: '先保留主策略，並用更嚴格的出場與風控保護成果。',
-    actionTune: '先降低風險承受，再微調進場門檻與敏感度。',
-    fallbackRisk: '目前沒有明顯結構性風險，但下一輪學習結果仍值得持續觀察。',
-    fallbackLearning: '維持目前調整方向，繼續累積更多複盤樣本再判斷。',
+    strategy: 'AI#101 目前策略',
+    transferTitle: '最近接收的學習模型',
+    reviewTitle: 'AI#101 成效複盤',
+    learningRounds: '接收模型次數',
+    sourceAgents: '來源 AI',
+    sourceTrades: '來源平倉數',
+    transferStatus: '模型傳送狀態',
+    transferReady: '已接收最新模型',
+    transferPending: '等待模型',
+    reviewStable: 'AI#101 目前仍能依照融合模型維持正向表現。',
+    reviewWeak: 'AI#101 目前表現轉弱，代表融合模型仍需要更多來源樣本。',
+    strengths: '目前做得好的地方',
+    risks: '目前要留意的地方',
+    fallbackRisk: '目前沒有明顯的結構風險，但仍要持續觀察下一批平倉結果。',
   },
   en: {
-    heroTitle: 'Top 6 Replay And Self-Learning Lab',
-    heroBody: 'This page clones only the dashboard top six agents, then runs isolated replay, self-learning, and strategy tuning inside its own sandbox.',
-    heroNote: 'The ranking still comes from the dashboard, but every adjustment and later result stays separate from the main dashboard state.',
-    reset: 'Reclone Dashboard Top 6',
-    totalProfit: 'Sandbox Profit',
+    heroTitle: 'AI Self-Learning Lab',
+    heroBody: 'This page runs AI#101 only. It reads the unified model generated on the learning page and validates it with an isolated 1000 USD sandbox balance.',
+    heroNote: 'AI#101 strategy, performance, positions, and trades live only inside this lab and never modify the main dashboard 100-agent dataset.',
+    reset: 'Reset AI#101 Sandbox',
+    waiting: 'No learning model is available for AI#101 yet. Visit the learning page first so source agents can build more closed-trade history.',
+    totalProfit: 'AI#101 Sandbox Profit',
     winRate: 'Win Rate',
     avgPnl: 'Avg Trade',
     positions: 'Positions',
-    learningRounds: 'Learning Rounds',
-    strategy: 'Current Strategy',
-    review: 'Replay Review',
-    learningAction: 'Self-Learning Adjustment',
+    strategy: 'AI#101 Current Strategy',
+    transferTitle: 'Latest Received Learning Model',
+    reviewTitle: 'AI#101 Performance Review',
+    learningRounds: 'Model Sync Count',
+    sourceAgents: 'Source AI',
+    sourceTrades: 'Source Closed Trades',
+    transferStatus: 'Model Transfer Status',
+    transferReady: 'Latest model received',
+    transferPending: 'Waiting for model',
+    reviewStable: 'AI#101 is still maintaining a positive edge under the unified model.',
+    reviewWeak: 'AI#101 is weakening, which means the unified model still needs more source data.',
     strengths: 'Current strengths',
     risks: 'Current risks',
-    empty: 'No replay data is available for the dashboard top six yet.',
-    rank: (value: number) => `Rank #${value}`,
-    stable: 'This AI is still holding an edge inside the replay sandbox.',
-    weak: 'This AI is weakening inside the replay sandbox and needs another review pass.',
-    strengthProfit: 'It still holds positive profit, so the core idea is still working after replay.',
-    strengthWinRate: 'Win rate is still above 50%, which keeps execution quality acceptable.',
-    strengthRisk: 'Leverage and concurrent position count are still under control.',
-    riskSample: 'The sandbox learning sample is still limited, so confidence should stay measured.',
-    riskWinRate: 'Win rate is soft, so the recent edge may not be stable enough yet.',
-    riskLeverage: 'Average leverage is elevated, which can magnify the next reversal.',
-    riskPositions: 'Too many concurrent positions can dilute capital control.',
-    actionDefend: 'Keep the main strategy and protect it with disciplined exits and risk control.',
-    actionTune: 'Reduce risk appetite first, then tune entry thresholds and sensitivity.',
-    fallbackRisk: 'No major structural risk stands out yet, but the next learning round still matters.',
-    fallbackLearning: 'Keep the current tuning direction and gather more replay samples before changing course.',
+    fallbackRisk: 'No major structural risk stands out yet, but the next closed trades still matter.',
   },
 } as const;
 
-function cloneAgents(agents: Agent[]) {
-  return JSON.parse(JSON.stringify(agents)) as Agent[];
-}
+function buildAi101Agent(model: LearningModel | null, seedPrices: Record<string, number>) {
+  const preferredSymbols =
+    model?.params.preferredSymbols.length
+      ? model.params.preferredSymbols
+      : Object.keys(seedPrices).slice(0, 12);
 
-function normalizeAgents(agents: Agent[]) {
-  return getDashboardRankedAgents(cloneAgents(agents)).slice(0, MAX_REPLAY_AGENTS);
-}
-
-function buildInitialState(seedAgents: Agent[], seedPrices: Record<string, number>): SandboxState {
   return {
-    savedAt: Date.now(),
-    startedAt: Date.now(),
-    agents: normalizeAgents(seedAgents),
-    prices: { ...seedPrices },
+    id: AI_101_ID,
+    name: 'AI#101',
+    strategyType: model ? 'Unified Learning Model' : 'Waiting Learning Model',
+    strategy: model?.unifiedStrategy ?? 'Waiting for the learning page to generate a transferable model.',
+    balance: STARTING_BALANCE,
+    activePositions: {},
+    equity: STARTING_BALANCE,
+    unrealizedPL: 0,
+    trades: [],
+    performance: 0,
+    color: 'hsl(163, 86%, 48%)',
+    status: 'IDLE' as Agent['status'],
+    strategyParams: {
+      riskTolerance: model?.params.riskTolerance ?? 0.08,
+      timeframe: 'SHORT',
+      sensitivity: model?.params.sensitivity ?? 1,
+      threshold: model?.params.threshold ?? 0.002,
+      exitThreshold: model?.params.exitThreshold ?? 0.005,
+      stopLoss: model?.params.stopLoss ?? 0.02,
+      takeProfit: model?.params.takeProfit ?? 0.04,
+      leverageMin: model?.params.leverageMin ?? 3,
+      leverageMax: model?.params.leverageMax ?? 10,
+      maxRiskPerTrade: model?.params.maxRiskPerTrade ?? 0.02,
+      scanCount: model?.params.scanCount ?? 10,
+      preferredSymbols,
+      learningModelFingerprint: model?.sourceFingerprint ?? 'none',
+      learnRevision: 0,
+      learningNote: model?.transferNote ?? '',
+    },
   };
 }
 
-function parseSavedState(raw: string | null): SandboxState | null {
+function applyModelToAi101(agent: Agent, model: LearningModel) {
+  return {
+    ...agent,
+    strategyType: 'Unified Learning Model',
+    strategy: model.unifiedStrategy,
+    strategyParams: {
+      ...agent.strategyParams,
+      ...model.params,
+      timeframe: 'SHORT',
+      preferredSymbols: model.params.preferredSymbols,
+      learningModelFingerprint: model.sourceFingerprint,
+      learningNote: model.transferNote,
+      learnRevision: Number(agent.strategyParams?.learnRevision ?? 0) + 1,
+    },
+  };
+}
+
+function parseState(raw: string | null, model: LearningModel | null, seedPrices: Record<string, number>): Ai101State | null {
   if (!raw) return null;
 
   try {
-    const parsed = JSON.parse(raw) as Partial<SandboxState>;
-    if (!parsed || !Array.isArray(parsed.agents) || !parsed.prices || typeof parsed.prices !== 'object') {
-      return null;
-    }
+    const parsed = JSON.parse(raw) as Partial<Ai101State>;
+    if (!parsed || !parsed.agent || !parsed.prices || typeof parsed.prices !== 'object') return null;
+
+    const nextAgent = model ? applyModelToAi101(parsed.agent as Agent, model) : (parsed.agent as Agent);
 
     return {
       savedAt: Number(parsed.savedAt) || Date.now(),
-      startedAt: Number(parsed.startedAt) || Date.now(),
-      agents: normalizeAgents(parsed.agents as Agent[]),
       prices: { ...(parsed.prices as Record<string, number>) },
+      appliedFingerprint: model?.sourceFingerprint ?? 'none',
+      agent: nextAgent,
     };
   } catch {
     return null;
   }
 }
 
-function readStoredSandboxState() {
+function readAi101State(model: LearningModel | null, seedPrices: Record<string, number>) {
   try {
-    return parseSavedState(localStorage.getItem(STORAGE_KEY));
+    return parseState(localStorage.getItem(STORAGE_KEY), model, seedPrices);
   } catch {
     return null;
   }
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function getActivePositionCount(agent: Agent) {
-  return Object.keys(agent.activePositions ?? {}).length;
-}
-
-function tuneAgentWithLearning(agent: Agent, lang: Language) {
-  const advice = buildAgentRecommendation(agent, lang);
-  const params = {
-    riskTolerance: Number(agent.strategyParams?.riskTolerance ?? 0.1),
-    sensitivity: Number(agent.strategyParams?.sensitivity ?? 1),
-    threshold: Number(agent.strategyParams?.threshold ?? 0.001),
-    exitThreshold: Number(agent.strategyParams?.exitThreshold ?? 0.003),
-    stopLoss: Number(agent.strategyParams?.stopLoss ?? 0.02),
-    takeProfit: Number(agent.strategyParams?.takeProfit ?? 0.04),
-    learnRevision: Number(agent.strategyParams?.learnRevision ?? 0),
-  };
-
-  if (advice.winRate < 45 || advice.totalPnl < 0 || agent.performance < 0) {
-    params.riskTolerance = clamp(params.riskTolerance * 0.92, 0.03, 0.35);
-    params.threshold = clamp(params.threshold * 1.08, 0.0004, 0.02);
-    params.sensitivity = clamp(params.sensitivity * 0.96, 0.5, 2.5);
-    params.stopLoss = clamp(params.stopLoss * 0.92, 0.005, 0.05);
-  } else if (advice.winRate >= 55 && advice.avgPnl >= 0) {
-    params.riskTolerance = clamp(params.riskTolerance * 1.03, 0.03, 0.4);
-    params.threshold = clamp(params.threshold * 0.98, 0.0003, 0.02);
-    params.takeProfit = clamp(params.takeProfit * 1.04, 0.01, 0.12);
-    params.sensitivity = clamp(params.sensitivity * 1.02, 0.5, 2.5);
-  } else {
-    params.threshold = clamp(params.threshold * 1.02, 0.0003, 0.02);
-    params.exitThreshold = clamp(params.exitThreshold * 1.01, 0.001, 0.04);
-  }
-
-  params.learnRevision += 1;
-
-  const baseStrategy = agent.strategy.split(' | Learn ')[0];
-  const nextStrategy =
-    lang === 'zh'
-      ? `${baseStrategy} | Learn ${params.learnRevision} (風險 ${params.riskTolerance.toFixed(2)}, 敏感度 ${params.sensitivity.toFixed(2)})`
-      : `${baseStrategy} | Learn ${params.learnRevision} (risk ${params.riskTolerance.toFixed(2)}, sensitivity ${params.sensitivity.toFixed(2)})`;
-
+function buildInitialState(model: LearningModel | null, seedPrices: Record<string, number>): Ai101State {
   return {
-    ...agent,
-    strategy: nextStrategy,
-    strategyParams: {
-      ...agent.strategyParams,
-      ...params,
-      lastLearningAt: Date.now(),
-      learningNote: advice.recommendation,
-    },
+    savedAt: Date.now(),
+    prices: { ...seedPrices },
+    appliedFingerprint: model?.sourceFingerprint ?? 'none',
+    agent: buildAi101Agent(model, seedPrices),
   };
 }
 
-function buildReplayReview(agent: Agent, lang: Language) {
-  const t = copy[lang];
+function buildReview(agent: Agent, lang: Language) {
   const advice = buildAgentRecommendation(agent, lang);
+  const t = copy[lang];
   const closedTrades = agent.trades.filter(
     (trade): trade is Trade & { realizedPL: number } =>
       trade.action === 'EXIT' && typeof trade.realizedPL === 'number'
   );
 
-  const strengths: string[] = [t.strengthProfit];
-  if (advice.winRate >= 50) strengths.push(t.strengthWinRate);
-  if (advice.avgLeverage <= 6 && advice.activePositions <= 3) strengths.push(t.strengthRisk);
-
+  const strengths: string[] = [];
   const risks: string[] = [];
-  if (closedTrades.length < 6) risks.push(t.riskSample);
-  if (advice.winRate < 45) risks.push(t.riskWinRate);
-  if (advice.avgLeverage >= 8) risks.push(t.riskLeverage);
-  if (advice.activePositions >= 4) risks.push(t.riskPositions);
+
+  if (advice.totalPnl >= 0) strengths.push(lang === 'zh' ? '目前沙盒累積仍為正報酬，代表模型方向還在發揮效果。' : 'Sandbox profit remains positive, so the model direction is still contributing.');
+  if (advice.winRate >= 50) strengths.push(lang === 'zh' ? '勝率維持在 50% 以上，出手品質尚可。' : 'Win rate is holding above 50%, so execution quality is acceptable.');
+  if (advice.avgLeverage <= 6) strengths.push(lang === 'zh' ? '平均槓桿仍在可控區間。' : 'Average leverage remains in a controlled range.');
+
+  if (closedTrades.length < 6) risks.push(lang === 'zh' ? 'AI#101 的平倉樣本還不大，暫時不要過度放大結果。' : 'AI#101 still has a small closed-trade sample, so results should stay provisional.');
+  if (advice.winRate < 45) risks.push(lang === 'zh' ? '勝率偏低，模型可能還需要下一輪來源資料修正。' : 'Win rate is soft, so the model may still need the next source update.');
+  if (advice.avgLeverage >= 8) risks.push(lang === 'zh' ? '平均槓桿偏高，回撤放大風險要留意。' : 'Average leverage is elevated, so drawdown risk can expand quickly.');
   if (risks.length === 0) risks.push(t.fallbackRisk);
 
   return {
     ...advice,
-    summary: advice.totalPnl >= 0 ? t.stable : t.weak,
+    summary: advice.totalPnl >= 0 ? t.reviewStable : t.reviewWeak,
     strengths,
     risks,
-    action: advice.totalPnl >= 0 && advice.winRate >= 50 ? t.actionDefend : t.actionTune,
   };
 }
 
-export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLearningLabProps) {
+export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabProps) {
   const t = copy[lang];
-  const [sandbox, setSandbox] = useState<SandboxState>(() => readStoredSandboxState() ?? buildInitialState(seedAgents, seedPrices));
+  const [model, setModel] = useState<LearningModel | null>(() => readLearningModel());
+  const [sandbox, setSandbox] = useState<Ai101State>(() => readAi101State(readLearningModel(), seedPrices) ?? buildInitialState(readLearningModel(), seedPrices));
   const historyMapRef = useRef<Record<string, number[]>>({});
-  const tickRef = useRef(0);
+
+  useEffect(() => {
+    const nextModel = readLearningModel();
+    setModel(nextModel);
+    setSandbox((prev) => {
+      if (!nextModel) return prev;
+      if (prev.appliedFingerprint === nextModel.sourceFingerprint) return prev;
+      return {
+        ...prev,
+        savedAt: Date.now(),
+        appliedFingerprint: nextModel.sourceFingerprint,
+        agent: applyModelToAi101(prev.agent, nextModel),
+      };
+    });
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== 'learningModel:v1') return;
+      const latest = readLearningModel();
+      setModel(latest);
+      setSandbox((prev) => {
+        if (!latest) return prev;
+        if (prev.appliedFingerprint === latest.sourceFingerprint) return prev;
+        return {
+          ...prev,
+          savedAt: Date.now(),
+          appliedFingerprint: latest.sourceFingerprint,
+          agent: applyModelToAi101(prev.agent, latest),
+        };
+      });
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     historyMapRef.current = Object.fromEntries(
@@ -232,68 +251,86 @@ export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLe
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...sandbox, savedAt: Date.now() }));
     } catch (error) {
-      console.warn('self-learning sandbox write failed', error);
+      console.warn('ai101 sandbox write failed', error);
     }
   }, [sandbox]);
 
   useEffect(() => {
-    let cancelled = false;
-
     const interval = window.setInterval(async () => {
       try {
+        const latestModel = readLearningModel();
+        if (latestModel && latestModel.sourceFingerprint !== sandbox.appliedFingerprint) {
+          setModel(latestModel);
+          setSandbox((prev) => ({
+            ...prev,
+            savedAt: Date.now(),
+            appliedFingerprint: latestModel.sourceFingerprint,
+            agent: applyModelToAi101(prev.agent, latestModel),
+          }));
+        }
+
         const allPrices = await fetchAllBybitTickers();
-        if (cancelled || Object.keys(allPrices).length === 0) return;
+        if (Object.keys(allPrices).length === 0) return;
 
         Object.keys(allPrices).forEach((symbol) => {
-          const seedPrice = allPrices[symbol];
-          const currentHistory = historyMapRef.current[symbol] ?? Array.from({ length: 20 }, () => seedPrice);
-          historyMapRef.current[symbol] = [...currentHistory.slice(-19), seedPrice];
+          const currentHistory = historyMapRef.current[symbol] ?? Array.from({ length: 20 }, () => allPrices[symbol]);
+          historyMapRef.current[symbol] = [...currentHistory.slice(-19), allPrices[symbol]];
         });
 
-        tickRef.current += 1;
-        const shouldLearn = tickRef.current % 3 === 0;
-
         setSandbox((prev) => {
-          const simulated = prev.agents.map((agent) => ({
-            ...agent,
-            ...executeStrategy(agent, allPrices, historyMapRef.current),
-          }));
-          const learned = shouldLearn ? simulated.map((agent) => tuneAgentWithLearning(agent, lang)) : simulated;
+          const agentWithLatestModel =
+            latestModel && prev.appliedFingerprint !== latestModel.sourceFingerprint
+              ? applyModelToAi101(prev.agent, latestModel)
+              : prev.agent;
+
+          const updatedAgent = {
+            ...agentWithLatestModel,
+            ...executeStrategy(agentWithLatestModel, allPrices, historyMapRef.current),
+          };
 
           return {
             ...prev,
             savedAt: Date.now(),
             prices: allPrices,
-            agents: normalizeAgents(learned),
+            appliedFingerprint: latestModel?.sourceFingerprint ?? prev.appliedFingerprint,
+            agent: updatedAgent,
           };
         });
       } catch (error) {
-        console.warn('self-learning sandbox tick failed', error);
+        console.warn('ai101 sandbox tick failed', error);
       }
     }, TICK_MS);
 
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, [lang]);
+    return () => window.clearInterval(interval);
+  }, [sandbox.appliedFingerprint]);
 
-  const replayAgents = useMemo(() => {
-    return normalizeAgents(sandbox.agents).map((agent, index) => ({
-      agent,
-      rank: index + 1,
-      review: buildReplayReview(agent, lang),
-    }));
-  }, [sandbox.agents, lang]);
+  const review = useMemo(() => buildReview(sandbox.agent, lang), [sandbox.agent, lang]);
 
-  const resetFromDashboard = () => {
-    const next = buildInitialState(seedAgents, seedPrices);
-    historyMapRef.current = Object.fromEntries(
-      Object.entries(next.prices).map(([symbol, price]) => [symbol, Array.from({ length: 20 }, () => price)])
-    );
-    tickRef.current = 0;
-    setSandbox(next);
+  const resetSandbox = () => {
+    const latestModel = readLearningModel();
+    setModel(latestModel);
+    setSandbox(buildInitialState(latestModel, seedPrices));
   };
+
+  if (!model) {
+    return (
+      <main className="mx-auto max-w-[1600px] space-y-6 p-4 sm:p-6">
+        <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-emerald-50 shadow-[0_0_30px_rgba(16,185,129,0.08)]">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-emerald-400/15 p-2 text-emerald-300">
+              <BrainCircuit className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-bold tracking-wide text-emerald-100">{t.heroTitle}</p>
+              <p className="text-sm leading-relaxed text-emerald-50/90">{t.heroBody}</p>
+              <p className="text-xs leading-relaxed text-emerald-100/70">{t.heroNote}</p>
+            </div>
+          </div>
+        </section>
+        <section className="rounded-2xl border border-white/5 bg-[#111] p-8 text-sm text-white/50">{t.waiting}</section>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-[1600px] space-y-6 p-4 sm:p-6">
@@ -310,7 +347,7 @@ export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLe
             </div>
           </div>
           <button
-            onClick={resetFromDashboard}
+            onClick={resetSandbox}
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white/80 transition-colors hover:bg-white/10"
           >
             <RefreshCw className="h-4 w-4" />
@@ -319,96 +356,101 @@ export default function SelfLearningLab({ seedAgents, seedPrices, lang }: SelfLe
         </div>
       </section>
 
-      {replayAgents.length === 0 ? (
-        <section className="rounded-2xl border border-white/5 bg-[#111] p-8 text-sm text-white/50">
-          {t.empty}
-        </section>
-      ) : (
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {replayAgents.map(({ agent, rank, review }) => (
-            <article key={agent.id} className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
-                    <TrendingUp className="h-3.5 w-3.5" />
-                    {t.rank(rank)}
-                  </div>
-                  <p className="text-lg font-bold text-white">{agent.name}</p>
-                  <p className="text-xs text-white/40">{agent.strategyType}</p>
-                </div>
-                <div className="text-left sm:text-right">
-                  <p className={cn('text-2xl font-mono font-bold', review.totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
-                    {review.totalPnl >= 0 ? '+' : ''}${review.totalPnl.toFixed(2)}
-                  </p>
-                  <p className="text-[11px] text-white/35">{t.totalProfit}</p>
-                </div>
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[0.92fr_1.08fr]">
+        <article className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+                <Bot className="h-3.5 w-3.5" />
+                AI#101
               </div>
+              <p className="text-lg font-bold text-white">{sandbox.agent.strategyType}</p>
+              <p className="text-xs text-white/40">{t.transferReady}</p>
+            </div>
+            <div className="text-left sm:text-right">
+              <p className={cn('text-2xl font-mono font-bold', review.totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                {review.totalPnl >= 0 ? '+' : ''}${review.totalPnl.toFixed(2)}
+              </p>
+              <p className="text-[11px] text-white/35">{t.totalProfit}</p>
+            </div>
+          </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-                <SmallStat label={t.totalProfit} value={`${review.totalPnl >= 0 ? '+' : ''}$${review.totalPnl.toFixed(2)}`} />
-                <SmallStat label={t.winRate} value={`${review.winRate.toFixed(0)}%`} />
-                <SmallStat label={t.avgPnl} value={`${review.avgPnl >= 0 ? '+' : ''}$${review.avgPnl.toFixed(2)}`} />
-                <SmallStat label={t.positions} value={review.activePositions} />
+          <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <SmallStat label={t.totalProfit} value={`${review.totalPnl >= 0 ? '+' : ''}$${review.totalPnl.toFixed(2)}`} />
+            <SmallStat label={t.winRate} value={`${review.winRate.toFixed(0)}%`} />
+            <SmallStat label={t.avgPnl} value={`${review.avgPnl >= 0 ? '+' : ''}$${review.avgPnl.toFixed(2)}`} />
+            <SmallStat label={t.positions} value={review.activePositions} />
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <SmallStat label={t.learningRounds} value={Number(sandbox.agent.strategyParams?.learnRevision ?? 0)} />
+            <SmallStat label={t.transferStatus} value={t.transferReady} />
+          </div>
+
+          <section className="mt-5 rounded-xl border border-sky-500/15 bg-sky-500/5 p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-sky-300">
+              <BrainCircuit className="h-4 w-4" />
+              {t.strategy}
+            </div>
+            <p className="text-sm leading-relaxed text-white/75">{sandbox.agent.strategy}</p>
+          </section>
+        </article>
+
+        <article className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
+          <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+            <Send className="h-4 w-4 text-emerald-300" />
+            {t.transferTitle}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <SmallStat label={t.sourceAgents} value={model.sourceAgentNames.length} />
+            <SmallStat label={t.sourceTrades} value={model.closedTradesReviewed} />
+            <SmallStat label={t.winRate} value={`${model.winRate.toFixed(1)}%`} />
+            <SmallStat label={t.avgPnl} value={`${model.avgPnl >= 0 ? '+' : ''}$${model.avgPnl.toFixed(2)}`} />
+          </div>
+          <div className="mt-4 rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-4">
+            <p className="text-sm font-bold text-white">{model.strategyTitle}</p>
+            <p className="mt-2 text-sm leading-relaxed text-white/75">{model.unifiedStrategy}</p>
+          </div>
+          <div className="mt-4 space-y-2">
+            {model.reviewNotes.map((item) => (
+              <div key={item} className="rounded-lg border border-white/5 bg-black/30 px-3 py-2 text-sm text-white/75">
+                {item}
               </div>
+            ))}
+          </div>
+        </article>
+      </section>
 
-              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                <SmallStat label={t.learningRounds} value={Number(agent.strategyParams?.learnRevision ?? 0)} />
-                <SmallStat label={t.positions} value={getActivePositionCount(agent)} />
-              </div>
+      <section className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
+        <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+          <ShieldAlert className="h-4 w-4 text-amber-300" />
+          {t.reviewTitle}
+        </div>
+        <p className="text-sm leading-relaxed text-white/80">{review.summary}</p>
 
-              <section className="mt-5 rounded-xl border border-sky-500/15 bg-sky-500/5 p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-sky-300">
-                  <BrainCircuit className="h-4 w-4" />
-                  {t.strategy}
+        <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-emerald-300">{t.strengths}</p>
+            <div className="space-y-2">
+              {review.strengths.map((item) => (
+                <div key={item} className="rounded-lg border border-emerald-500/10 bg-emerald-500/5 px-3 py-2 text-sm text-white/75">
+                  {item}
                 </div>
-                <p className="text-sm leading-relaxed text-white/75">{agent.strategy}</p>
-              </section>
-
-              <section className="mt-4 rounded-xl border border-amber-500/15 bg-amber-500/5 p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-amber-300">
-                  <ShieldAlert className="h-4 w-4" />
-                  {t.review}
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-rose-300">{t.risks}</p>
+            <div className="space-y-2">
+              {review.risks.map((item) => (
+                <div key={item} className="rounded-lg border border-rose-500/10 bg-rose-500/5 px-3 py-2 text-sm text-white/75">
+                  {item}
                 </div>
-                <p className="text-sm leading-relaxed text-white/80">{review.summary}</p>
-
-                <div className="mt-4">
-                  <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-emerald-300">{t.strengths}</p>
-                  <div className="space-y-2">
-                    {review.strengths.map((item) => (
-                      <div key={item} className="rounded-lg border border-emerald-500/10 bg-emerald-500/5 px-3 py-2 text-sm text-white/75">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-rose-300">{t.risks}</p>
-                  <div className="space-y-2">
-                    {review.risks.map((item) => (
-                      <div key={item} className="rounded-lg border border-rose-500/10 bg-rose-500/5 px-3 py-2 text-sm text-white/75">
-                        <div className="flex items-start gap-2">
-                          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
-                          <span>{item}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-lg border border-white/5 bg-black/20 p-3">
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-white/40">{t.learningAction}</p>
-                  <p className="text-sm leading-relaxed text-white/80">
-                    {typeof agent.strategyParams?.learningNote === 'string' && agent.strategyParams.learningNote.trim()
-                      ? agent.strategyParams.learningNote
-                      : review.action || t.fallbackLearning}
-                  </p>
-                </div>
-              </section>
-            </article>
-          ))}
-        </section>
-      )}
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

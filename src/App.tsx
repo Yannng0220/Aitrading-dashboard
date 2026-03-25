@@ -19,19 +19,17 @@ import {
   ShieldAlert,
   BrainCircuit,
   LayoutDashboard,
-  BadgeDollarSign,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from './lib/utils';
+import { buildUnifiedLearningModel, type Language, writeLearningModel } from './lib/learningLab';
 import { compareAgentsByDashboardRank, getDashboardRankedAgents } from './lib/ranking';
 import { Agent, MarketData, Trade, Position } from './types';
 import { applyAgentMigrations, generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
 import Learning from './pages/Learning';
 import LearningAgentDetail from './pages/LearningAgentDetail';
-import TopProfit from './pages/TopProfit';
 import SelfLearningLab from './pages/SelfLearningLab';
-import type { Language } from './pages/Learning';
 
 const AGENT_COUNT = 100;
 const AGENTS_STORAGE_KEY = 'agentsState:v2';
@@ -391,6 +389,11 @@ export default function App() {
     }
   }, [lang]);
 
+  useEffect(() => {
+    if (!isHydrated || agents.length !== AGENT_COUNT) return;
+    writeLearningModel(buildUnifiedLearningModel(agents, lang));
+  }, [agents, isHydrated, lang]);
+
   const filteredAgents = useMemo(() => {
     return agents
       .filter(a => 
@@ -408,8 +411,6 @@ export default function App() {
   const learningAgentId = learningAgentMatch ? Number(learningAgentMatch[1]) : null;
   const currentPage = learningAgentId !== null
     ? 'learning-agent'
-    : location.pathname === '/top-profit'
-      ? 'top-profit'
     : location.pathname === '/self-learning-lab'
       ? 'self-learning-lab'
     : location.pathname === '/about'
@@ -426,8 +427,7 @@ export default function App() {
     ? {
         navDashboard: '儀表板',
         navLearning: '學習頁',
-        navTopProfit: '高獲利榜',
-        navSelfLearningLab: '自學實驗室',
+        navSelfLearningLab: 'AI 自學實驗室',
         liveEngine: '即時市場引擎',
         selectorPlaceholder: '選擇 AI',
         selectorSearch: '搜尋名稱或策略...',
@@ -473,8 +473,7 @@ export default function App() {
     : {
         navDashboard: 'Dashboard',
         navLearning: 'Learning',
-        navTopProfit: 'Top Profit',
-        navSelfLearningLab: 'Self Learning',
+        navSelfLearningLab: 'AI Lab',
         liveEngine: 'Live Market Engine',
         selectorPlaceholder: 'Select AI',
         selectorSearch: 'Search by name or strategy...',
@@ -656,18 +655,6 @@ export default function App() {
                 {ui.navLearning}
               </button>
               <button
-                onClick={() => navigate('/top-profit')}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
-                  currentPage === 'top-profit'
-                    ? 'bg-amber-500/10 text-amber-300'
-                    : 'text-white/50 hover:text-white'
-                )}
-              >
-                <BadgeDollarSign className="h-3.5 w-3.5" />
-                {ui.navTopProfit}
-              </button>
-              <button
                 onClick={() => navigate('/self-learning-lab')}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
@@ -770,10 +757,8 @@ export default function App() {
         <Learning agents={agents} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} lang={lang} />
       ) : currentPage === 'learning-agent' ? (
         <LearningAgentDetail agent={selectedLearningAgent} onBack={() => navigate('/learning')} lang={lang} />
-      ) : currentPage === 'top-profit' ? (
-        <TopProfit agents={agents} lang={lang} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} />
       ) : currentPage === 'self-learning-lab' ? (
-        <SelfLearningLab seedAgents={agents} seedPrices={prices} lang={lang} />
+        <SelfLearningLab seedPrices={prices} lang={lang} />
       ) : currentPage === 'about' ? (
         <StaticPage
           title={ui.aboutTitle}

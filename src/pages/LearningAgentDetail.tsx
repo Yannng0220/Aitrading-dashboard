@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { ArrowLeft, Bot, BrainCircuit, TrendingDown, TrendingUp, TriangleAlert } from 'lucide-react';
 import { Agent, Trade } from '../types';
 import { cn } from '../lib/utils';
-import { buildAgentRecommendation, type Language } from './Learning';
+import { buildAgentRecommendation, type Language } from '../lib/learningLab';
 
 type LearningAgentDetailProps = {
   agent: Agent | null;
@@ -14,13 +14,13 @@ const copy = {
   zh: {
     back: '返回學習頁',
     missing: '找不到這個 AI 的學習資料。',
-    recommendation: '調參建議',
+    recommendation: '調整建議',
     history: '最近平倉紀錄',
-    strategy: '策略概況',
-    noTrades: '這個 AI 目前還沒有足夠的平倉紀錄可供分析。',
+    strategy: '策略說明',
+    noTrades: '這個 AI 目前還沒有足夠的平倉資料可分析。',
     stats: {
       winRate: '勝率',
-      avgPnl: '平均單筆盈虧',
+      avgPnl: '平均單筆',
       leverage: '平均槓桿',
       positions: '目前持倉',
     },
