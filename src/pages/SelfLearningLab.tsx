@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, BrainCircuit, RefreshCw, Send, ShieldAlert, TrendingUp } from 'lucide-react';
+import { Bot, BrainCircuit, History, Info, RefreshCw, Send, ShieldAlert, TrendingUp } from 'lucide-react';
 import { Agent, Trade } from '../types';
 import { executeStrategy, fetchAllBybitTickers } from '../simulation';
 import { cn } from '../lib/utils';
@@ -47,6 +47,21 @@ const copy = {
     transferStatus: '模型傳送狀態',
     transferReady: '已接收最新模型',
     transferPending: '等待模型',
+    openPositionsTitle: 'AI#101 目前持倉',
+    entryLogicTitle: 'AI#101 開單邏輯',
+    entryReasonTitle: 'AI#101 為什麼開單',
+    noOpenPositions: 'AI#101 目前沒有持倉。',
+    noEntryReasons: '目前還沒有新的進場單，等 AI#101 開第一筆單後就會顯示原因。',
+    quantity: '數量',
+    leverage: '槓桿',
+    entryPrice: '進場價',
+    marketPrice: '現價',
+    unrealized: '浮動盈虧',
+    preferredSymbols: '優先觀察標的',
+    modelThreshold: '進場門檻',
+    modelExit: '出場門檻',
+    modelRisk: '單筆風險',
+    latestEntries: '最近進場單',
     reviewStable: 'AI#101 目前仍能依照融合模型維持正向表現。',
     reviewWeak: 'AI#101 目前表現轉弱，代表融合模型仍需要更多來源樣本。',
     strengths: '目前做得好的地方',
@@ -72,6 +87,21 @@ const copy = {
     transferStatus: 'Model Transfer Status',
     transferReady: 'Latest model received',
     transferPending: 'Waiting for model',
+    openPositionsTitle: 'AI#101 Open Positions',
+    entryLogicTitle: 'AI#101 Entry Logic',
+    entryReasonTitle: 'Why AI#101 Opened The Trade',
+    noOpenPositions: 'AI#101 has no open positions right now.',
+    noEntryReasons: 'There are no fresh entry orders yet. The reason panel will fill in after AI#101 opens a trade.',
+    quantity: 'Quantity',
+    leverage: 'Leverage',
+    entryPrice: 'Entry Price',
+    marketPrice: 'Market Price',
+    unrealized: 'Unrealized PnL',
+    preferredSymbols: 'Preferred Symbols',
+    modelThreshold: 'Entry Threshold',
+    modelExit: 'Exit Threshold',
+    modelRisk: 'Risk Per Trade',
+    latestEntries: 'Latest Entry Orders',
     reviewStable: 'AI#101 is still maintaining a positive edge under the unified model.',
     reviewWeak: 'AI#101 is weakening, which means the unified model still needs more source data.',
     strengths: 'Current strengths',
@@ -305,6 +335,14 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
   }, [sandbox.appliedFingerprint]);
 
   const review = useMemo(() => buildReview(sandbox.agent, lang), [sandbox.agent, lang]);
+  const openPositions = useMemo(() => Object.values(sandbox.agent.activePositions ?? {}), [sandbox.agent.activePositions]);
+  const latestEntryTrades = useMemo(
+    () =>
+      sandbox.agent.trades
+        .filter((trade) => trade.action === 'ENTRY')
+        .slice(0, 6),
+    [sandbox.agent.trades]
+  );
 
   const resetSandbox = () => {
     const latestModel = readLearningModel();
@@ -419,6 +457,122 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
             ))}
           </div>
         </article>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
+        <article className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
+          <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+            <TrendingUp className="h-4 w-4 text-emerald-300" />
+            {t.openPositionsTitle}
+          </div>
+
+          {openPositions.length > 0 ? (
+            <div className="space-y-3">
+              {openPositions.map((position) => {
+                const marketPrice = sandbox.prices[position.symbol] ?? position.avgEntryPrice;
+                return (
+                  <div key={position.symbol} className="rounded-xl border border-white/5 bg-black/30 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-bold text-white">{position.symbol}</p>
+                          <span
+                            className={cn(
+                              'rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest',
+                              position.side === 'SHORT'
+                                ? 'border-rose-500/20 bg-rose-500/10 text-rose-400'
+                                : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                            )}
+                          >
+                            {position.side}
+                          </span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-3">
+                          <SmallStat label={t.quantity} value={position.amount.toFixed(4)} />
+                          <SmallStat label={t.leverage} value={`${position.leverage}x`} />
+                          <SmallStat label={t.entryPrice} value={`$${position.avgEntryPrice.toLocaleString()}`} />
+                          <SmallStat label={t.marketPrice} value={`$${marketPrice.toLocaleString()}`} />
+                        </div>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">{t.unrealized}</p>
+                        <p className={cn('mt-2 text-lg font-mono font-bold', position.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                          {position.unrealizedPL >= 0 ? '+' : ''}${position.unrealizedPL.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-white/5 bg-black/30 p-6 text-sm text-white/45">{t.noOpenPositions}</div>
+          )}
+        </article>
+
+        <article className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
+          <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+            <BrainCircuit className="h-4 w-4 text-sky-300" />
+            {t.entryLogicTitle}
+          </div>
+
+          <div className="space-y-3">
+            <div className="rounded-xl border border-sky-500/10 bg-sky-500/5 p-4">
+              <p className="text-sm font-bold text-white">{model.strategyTitle}</p>
+              <p className="mt-2 text-sm leading-relaxed text-white/75">{model.unifiedStrategy}</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <SmallStat label={t.modelThreshold} value={model.params.threshold.toFixed(4)} />
+              <SmallStat label={t.modelExit} value={model.params.exitThreshold.toFixed(4)} />
+              <SmallStat label={t.modelRisk} value={`${(model.params.maxRiskPerTrade * 100).toFixed(1)}%`} />
+              <SmallStat label={t.preferredSymbols} value={model.params.preferredSymbols.slice(0, 4).join(', ') || '-'} />
+            </div>
+
+            {model.entryFocus.map((item) => (
+              <div key={item} className="rounded-lg border border-white/5 bg-black/30 px-3 py-2 text-sm text-white/75">
+                {item}
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
+        <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+          <History className="h-4 w-4 text-amber-300" />
+          {t.entryReasonTitle}
+        </div>
+
+        {latestEntryTrades.length > 0 ? (
+          <div className="space-y-3">
+            {latestEntryTrades.map((trade) => (
+              <div key={trade.id} className="rounded-xl border border-white/5 bg-black/30 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={cn(
+                        'rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest',
+                        trade.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                      )}
+                    >
+                      {trade.symbol} {trade.type} {trade.leverage ? `${trade.leverage}x` : ''}
+                    </span>
+                    <span className="text-xs font-mono text-white/60">${trade.price.toLocaleString()}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-white/30">{new Date(trade.timestamp).toLocaleString()}</span>
+                </div>
+
+                <div className="mt-3 flex items-start gap-2">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
+                  <p className="text-sm leading-relaxed text-white/75">{trade.reason}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-white/5 bg-black/30 p-6 text-sm text-white/45">{t.noEntryReasons}</div>
+        )}
       </section>
 
       <section className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
