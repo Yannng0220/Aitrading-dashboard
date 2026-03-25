@@ -59,6 +59,14 @@ const parseSavedState = (raw: string | null): SavedAgentsState | null => {
 };
 
 export default function App() {
+  return (
+    <AppErrorBoundary>
+      <AppContent />
+    </AppErrorBoundary>
+  );
+}
+
+function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const [deviceId] = useState(() => {
@@ -401,11 +409,15 @@ export default function App() {
   }, [agents, isHydrated, lang]);
 
   const filteredAgents = useMemo(() => {
+    const keyword = searchTerm.toLowerCase();
+
     return agents
-      .filter(a => 
-        a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        a.strategyType.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      .filter((agent) => agent && typeof agent.id === 'number')
+      .filter((agent) => {
+        const name = typeof agent.name === 'string' ? agent.name : `AI#${agent.id}`;
+        const strategyType = typeof agent.strategyType === 'string' ? agent.strategyType : '';
+        return name.toLowerCase().includes(keyword) || strategyType.toLowerCase().includes(keyword);
+      })
       .sort(compareAgentsByDashboardRank);
   }, [agents, searchTerm]);
 
@@ -1192,4 +1204,48 @@ function StaticPage({
       ))}
     </main>
   );
+}
+
+type AppErrorBoundaryProps = {
+  children: React.ReactNode;
+};
+
+type AppErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class AppErrorBoundary extends React.Component<any, AppErrorBoundaryState> {
+  declare props: AppErrorBoundaryProps;
+  declare state: AppErrorBoundaryState;
+
+  constructor(props: AppErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error('App render failed:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="min-h-screen bg-[#0a0a0a] px-4 py-10 text-[#e0e0e0] sm:px-6">
+          <section className="mx-auto max-w-[900px] rounded-2xl border border-rose-500/20 bg-[#111] p-6 shadow-2xl">
+            <p className="text-sm font-bold uppercase tracking-widest text-rose-400">Rendering Recovery</p>
+            <h1 className="mt-3 text-2xl font-bold text-white">The page hit a runtime error.</h1>
+            <p className="mt-3 text-sm leading-7 text-white/70">
+              Please refresh once. If the page still fails, the app will keep this fallback visible instead of showing a blank screen.
+            </p>
+          </section>
+        </main>
+      );
+    }
+
+    return this.props.children;
+  }
 }
