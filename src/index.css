@@ -11,4 +11,20 @@
   html {
     font-size: 17px;
   }
-}
+
+  .text-\[8px\] {
+    font-size: 12px;
+  }
+
+  .text-\[9px\] {
+    font-size: 13.5px;
+  }
+
+  .text-\[10px\] {
+    font-size: 15px;
+  }
+
+  .text-\[11px\] {
+    font-size: 16.5px;
+  }
+  }
