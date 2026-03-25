@@ -657,7 +657,7 @@ function AppContent() {
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
               <Zap className="w-5 h-5 text-black fill-current" />
             </div>
-            <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl">Yang-RotBot Trading</h1>
+            <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl md:text-2xl">Yang-RotBot Trading</h1>
           </div>
 
           <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:flex-nowrap md:gap-6">
@@ -665,7 +665,7 @@ function AppContent() {
               <button
                 onClick={() => navigate('/')}
                 className={cn(
-                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3',
+                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3 md:text-[12px]',
                   currentPage === 'dashboard'
                     ? 'bg-emerald-500/10 text-emerald-400'
                     : 'text-white/50 hover:text-white'
@@ -677,7 +677,7 @@ function AppContent() {
               <button
                 onClick={() => navigate('/learning')}
                 className={cn(
-                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3',
+                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3 md:text-[12px]',
                   currentPage === 'learning' || currentPage === 'learning-agent'
                     ? 'bg-sky-500/10 text-sky-300'
                     : 'text-white/50 hover:text-white'
@@ -689,7 +689,7 @@ function AppContent() {
               <button
                 onClick={() => navigate('/self-learning-lab')}
                 className={cn(
-                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3',
+                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3 md:text-[12px]',
                   currentPage === 'self-learning-lab'
                     ? 'bg-emerald-500/10 text-emerald-300'
                     : 'text-white/50 hover:text-white'
@@ -701,7 +701,7 @@ function AppContent() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 text-[10px] font-bold tracking-widest uppercase">
+            <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-500 md:text-[12px]">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               {ui.liveEngine}
             </div>
@@ -710,7 +710,7 @@ function AppContent() {
             <div className="relative hidden md:block">
               <button 
                 onClick={() => setIsSelectorOpen(!isSelectorOpen)}
-                className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all text-sm font-medium"
+                className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium transition-all hover:bg-white/10 md:text-base"
               >
                 <Cpu className="w-4 h-4 text-emerald-500" />
                 {selectedAgent ? selectedAgent.name : ui.selectorPlaceholder}
@@ -743,12 +743,12 @@ function AppContent() {
                           setIsSelectorOpen(false);
                         }}
                         className={cn(
-                          "w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between",
+                          "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors md:text-sm",
                           selectedAgentId === agent.id ? "bg-emerald-500/20 text-emerald-400" : "hover:bg-white/5 text-white/60"
                         )}
                       >
                         <span>{agent.name}</span>
-                        <span className="text-[10px] font-mono opacity-50">{agent.performance.toFixed(1)}%</span>
+                        <span className="font-mono text-[10px] opacity-50 md:text-[12px]">{agent.performance.toFixed(1)}%</span>
                       </button>
                     ))}
                   </motion.div>
@@ -762,7 +762,7 @@ function AppContent() {
                   key={option}
                   onClick={() => setLang(option)}
                   className={cn(
-                    'rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                    'rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors md:text-[12px]',
                     lang === option ? 'bg-sky-500/15 text-sky-300' : 'text-white/45 hover:text-white'
                   )}
                 >
@@ -772,8 +772,8 @@ function AppContent() {
             </div>
 
             <div className="flex flex-col items-end">
-              <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">{ui.marketStatusLabel}</span>
-              <span className="font-mono text-lg font-medium text-emerald-400">{ui.marketStatusValue}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 md:text-[12px]">{ui.marketStatusLabel}</span>
+              <span className="font-mono text-lg font-medium text-emerald-400 md:text-2xl">{ui.marketStatusValue}</span>
             </div>
             
             <button 
@@ -887,7 +887,7 @@ function AppContent() {
                 <input
                   type="text"
                   placeholder={display.agentsSearchPlaceholder}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm transition-colors focus:border-emerald-500/50 focus:outline-none"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm transition-colors focus:border-emerald-500/50 focus:outline-none md:text-base"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -915,7 +915,7 @@ function AppContent() {
                         <div className="h-2 w-2 animate-pulse rounded-full" style={{ backgroundColor: agent.color }} />
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-sm font-bold text-white transition-colors group-hover:text-emerald-400">{agent.name}</h3>
+                            <h3 className="text-sm font-bold text-white transition-colors group-hover:text-emerald-400 md:text-lg">{agent.name}</h3>
                             <span className="rounded border border-white/5 bg-white/5 px-1.5 py-0.5 text-[9px] font-mono text-white/60">
                               {Object.keys(agent.activePositions).length} {display.positionsCount}
                             </span>
@@ -930,10 +930,10 @@ function AppContent() {
                               </span>
                             )}
                           </div>
-                          <p className="text-[10px] font-mono uppercase tracking-tighter text-white/40">{agent.strategyType}</p>
+                          <p className="text-[10px] font-mono uppercase tracking-tighter text-white/40 md:text-[12px]">{agent.strategyType}</p>
                         </div>
                       </div>
-                      <div className={cn('text-xs font-mono font-bold', agent.performance >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                      <div className={cn('text-xs font-mono font-bold md:text-base', agent.performance >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                         {agent.performance >= 0 ? '+' : ''}{agent.performance.toFixed(2)}%
                       </div>
                     </div>
@@ -941,11 +941,11 @@ function AppContent() {
                     <div className="mb-3 grid grid-cols-2 gap-2">
                       <div className="rounded-lg border border-white/5 bg-black/40 p-2">
                         <p className="mb-1 text-[8px] font-bold uppercase text-white/30">{display.equityLabel}</p>
-                        <p className="text-xs font-mono">${agent.equity.toLocaleString(locale, { maximumFractionDigits: 0 })}</p>
+                        <p className="text-xs font-mono md:text-base">${agent.equity.toLocaleString(locale, { maximumFractionDigits: 0 })}</p>
                       </div>
                       <div className="rounded-lg border border-white/5 bg-black/40 p-2">
                         <p className="mb-1 text-[8px] font-bold uppercase text-white/30">{display.unrealizedPnlLabel}</p>
-                        <p className={cn('text-xs font-mono font-bold', agent.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                        <p className={cn('text-xs font-mono font-bold md:text-base', agent.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                           {agent.unrealizedPL >= 0 ? '+' : ''}${agent.unrealizedPL.toFixed(2)}
                         </p>
                       </div>
@@ -1153,8 +1153,8 @@ function StatCard({ label, value, icon, trend, trendUp }: { label: string, value
           {trend}
         </div>
       </div>
-      <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">{label}</p>
-      <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
+      <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-white/40 md:text-[12px]">{label}</p>
+      <p className="text-2xl font-bold tracking-tight text-white md:text-4xl">{value}</p>
     </div>
   );
 }
