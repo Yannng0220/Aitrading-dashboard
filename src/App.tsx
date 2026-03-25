@@ -431,6 +431,17 @@ export default function App() {
     }
   }, [currentPage]);
 
+  useEffect(() => {
+    if (currentPage !== 'dashboard' || !selectedAgent) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [currentPage, selectedAgent]);
+
   const ui = lang === 'zh'
     ? {
         navDashboard: '儀表板',
@@ -554,6 +565,7 @@ export default function App() {
         leverageLabel: '槓桿',
         quantityLabel: '數量',
         marginLabel: '保證金',
+        openDetailCta: '點擊查看詳情',
         noOpenPositions: '目前沒有持倉。',
         recentTrades: '最近交易紀錄',
         recentTradesLimit: '最近 20 筆',
@@ -601,6 +613,7 @@ export default function App() {
         leverageLabel: 'Leverage',
         quantityLabel: 'Quantity',
         marginLabel: 'Margin',
+        openDetailCta: 'Tap for detail',
         noOpenPositions: 'No open positions right now.',
         recentTrades: 'Recent Trade History',
         recentTradesLimit: 'Last 20',
@@ -845,15 +858,16 @@ export default function App() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <AnimatePresence mode="popLayout">
                 {filteredAgents.slice(0, 12).map((agent) => (
-                  <motion.div
+                  <motion.button
                     key={agent.id}
+                    type="button"
                     layout
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     onClick={() => setSelectedAgentId(agent.id)}
                     className={cn(
-                      'group relative cursor-pointer rounded-xl border border-white/5 bg-[#111] p-4 transition-all hover:border-emerald-500/30 hover:bg-[#151515]',
+                      'group relative w-full cursor-pointer rounded-xl border border-white/5 bg-[#111] p-4 text-left transition-all hover:border-emerald-500/30 hover:bg-[#151515] active:scale-[0.99]',
                       selectedAgentId === agent.id && 'border-emerald-500 ring-1 ring-emerald-500/50'
                     )}
                   >
@@ -903,7 +917,10 @@ export default function App() {
                         <div key={i} className="flex-1 rounded-t-[1px] bg-emerald-500" style={{ height: `${20 + Math.random() * 80}%` }} />
                       ))}
                     </div>
-                  </motion.div>
+                    <div className="mt-3 inline-flex items-center rounded-full border border-emerald-500/15 bg-emerald-500/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+                      {display.openDetailCta}
+                    </div>
+                  </motion.button>
                 ))}
               </AnimatePresence>
             </div>
@@ -1159,7 +1176,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-start"
             onClick={() => setSelectedAgentId(null)}
           >
             <motion.div
@@ -1167,9 +1184,12 @@ export default function App() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.18 }}
-              className="mx-auto mt-6 max-h-[calc(100vh-3rem)] w-[min(1100px,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-emerald-500/30 bg-[#111] p-4 shadow-[0_0_60px_rgba(16,185,129,0.16)] sm:mt-10 sm:p-6"
+              className="max-h-[88vh] w-full overflow-y-auto rounded-t-3xl border border-emerald-500/30 bg-[#111] p-4 shadow-[0_0_60px_rgba(16,185,129,0.16)] sm:mt-10 sm:max-h-[calc(100vh-5rem)] sm:w-[min(1100px,calc(100vw-2rem))] sm:rounded-2xl sm:p-6"
               onClick={(event) => event.stopPropagation()}
             >
+              <div className="mb-4 flex justify-center sm:hidden">
+                <div className="h-1.5 w-14 rounded-full bg-white/15" />
+              </div>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-emerald-500">
                   <Cpu className="w-4 h-4" /> {display.agentDetailTitle}
