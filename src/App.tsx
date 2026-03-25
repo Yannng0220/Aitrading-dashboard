@@ -409,8 +409,6 @@ export default function App() {
       .sort(compareAgentsByDashboardRank);
   }, [agents, searchTerm]);
 
-  const topPerformers = getDashboardRankedAgents(agents).slice(0, 5);
-  const liquidatedAgents = agents.filter(a => a.equity <= 0).sort(compareAgentsByDashboardRank);
   const totalEquity = agents.reduce((sum, a) => sum + a.equity, 0);
   const avgPerformance = agents.reduce((sum, a) => sum + a.performance, 0) / AGENT_COUNT;
   const learningAgentMatch = location.pathname.match(/^\/learning\/agent\/(\d+)$/);
@@ -562,8 +560,6 @@ export default function App() {
         equityLabel: '權益',
         unrealizedPnlLabel: '浮動盈虧',
         showingAgents: (count: number) => `目前顯示前 12 / 共 ${count} 個 AI`,
-        topPerformers: '績效排行榜',
-        liquidatedAgents: (count: number) => `已歸零代理 (${count})`,
         agentDetailTitle: '代理詳情',
         openPositions: '目前持倉',
         currentUnrealized: '當前浮動盈虧',
@@ -580,14 +576,13 @@ export default function App() {
         strategyOverview: '策略概況',
         strategyConfidenceText: '目前策略類型為',
         strategyConfidenceSuffix: '，模擬信心分數為',
-        emptySelectionTitle: '尚未選擇 AI',
-        emptySelectionBody: '請從列表或上方選單挑選一個 AI，查看它的持倉、交易紀錄與策略說明。',
-        systemLogs: '系統日誌',
+        systemLogs: '系統更新',
+        systemLogsBody: '這裡只顯示介面與 AI#101 沙盒功能更新，不會修改任何儀表板數據資料。',
         logs: [
-          '系統已就緒，100 個 AI 代理正在運作。',
-          '延遲檢查已在 1.2ms 內完成。',
-          '市場資料已透過 WebSocket 連線。',
-          '風險監控偵測到 7 個高波動標的。',
+          '儀表板 AI 卡片已可直接點擊開啟詳情，手機版也已完成點擊適配。',
+          'AI#101 現在只會在前六名來源策略出現平倉資料後才接收最新模型。',
+          'AI#101 已加入樣本門檻、最多 5 筆持倉，以及實際艙位大小顯示。',
+          '以上調整只影響介面與 AI#101 沙盒，不會動到主儀表板數據。',
         ],
       }
     : {
@@ -610,8 +605,6 @@ export default function App() {
         equityLabel: 'Equity',
         unrealizedPnlLabel: 'Unrealized PnL',
         showingAgents: (count: number) => `Showing top 12 of ${count} agents`,
-        topPerformers: 'Top Performers',
-        liquidatedAgents: (count: number) => `Liquidated Agents (${count})`,
         agentDetailTitle: 'Agent Detail',
         openPositions: 'Open Positions',
         currentUnrealized: 'Current Unrealized PnL',
@@ -628,14 +621,13 @@ export default function App() {
         strategyOverview: 'Strategy Overview',
         strategyConfidenceText: 'Current strategy type:',
         strategyConfidenceSuffix: 'with a simulated confidence score of',
-        emptySelectionTitle: 'No Agent Selected',
-        emptySelectionBody: 'Choose an AI from the list or selector to inspect positions, trade history, and strategy notes.',
-        systemLogs: 'System Logs',
+        systemLogs: 'System Updates',
+        systemLogsBody: 'This area shows interface and AI#101 sandbox updates only. It does not modify any dashboard data.',
         logs: [
-          'System ready. 100 AI agents are active.',
-          'Latency check completed in 1.2ms.',
-          'Market feed connected through WebSocket.',
-          'Risk monitor detected 7 high-volatility symbols.',
+          'Dashboard agent cards now open detail directly, including mobile-friendly tapping.',
+          'AI#101 now receives new models only after the top-six source strategies produce closed trades.',
+          'AI#101 now enforces a sample gate, a five-position cap, and real position-size display.',
+          'These changes affect UI and the AI#101 sandbox only, not the main dashboard dataset.',
         ],
       };
   const sideLabel = (side: Position['side']) => (side === 'SHORT' ? display.positionShort : display.positionLong);
@@ -845,6 +837,33 @@ export default function App() {
             </div>
           </div>
 
+          <div className="rounded-2xl border border-white/5 bg-[#111] p-4 shadow-2xl sm:p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+                <History className="w-4 h-4 text-emerald-400" /> {display.systemLogs}
+              </h2>
+            </div>
+            <p className="mb-4 text-xs leading-relaxed text-white/35">{display.systemLogsBody}</p>
+            <div className="space-y-2 font-mono text-[10px]">
+              <div className="flex gap-2 text-emerald-500/70">
+                <span>[Update]</span>
+                <span>{display.logs[0]}</span>
+              </div>
+              <div className="flex gap-2 text-white/45">
+                <span>[Update]</span>
+                <span>{display.logs[1]}</span>
+              </div>
+              <div className="flex gap-2 text-white/45">
+                <span>[Update]</span>
+                <span>{display.logs[2]}</span>
+              </div>
+              <div className="flex gap-2 text-amber-400/70">
+                <span>[Safe]</span>
+                <span>{display.logs[3]}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4">
             <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
               <h2 className="text-sm font-bold uppercase tracking-widest text-white/60">{display.agentsPanelTitle}</h2>
@@ -938,240 +957,6 @@ export default function App() {
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="rounded-2xl border border-white/5 bg-[#111] p-4 sm:p-6">
-            <h2 className="mb-6 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
-              <TrendingUp className="w-4 h-4 text-emerald-500" /> {display.topPerformers}
-            </h2>
-            <div className="space-y-4">
-              {topPerformers.map((agent, idx) => (
-                <div key={agent.id} className="group flex cursor-pointer flex-col items-start justify-between gap-2 sm:flex-row sm:items-center" onClick={() => setSelectedAgentId(agent.id)}>
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="w-4 text-xs font-mono text-white/20">{idx + 1}</span>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-xs font-bold transition-colors group-hover:border-emerald-500/50">
-                      {agent.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white transition-colors group-hover:text-emerald-400">{agent.name}</p>
-                      <p className="text-[10px] text-white/40">{agent.strategyType}</p>
-                    </div>
-                  </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-xs font-mono font-bold text-emerald-400">+{agent.performance.toFixed(2)}%</p>
-                    <p className="text-[10px] text-white/20">${(agent.equity / 1000).toFixed(1)}k</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {liquidatedAgents.length > 0 && (
-            <div className="rounded-2xl border border-rose-500/20 bg-[#111] p-4 sm:p-6">
-              <h2 className="mb-6 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-rose-500/60">
-                <AlertCircle className="w-4 h-4 text-rose-500" /> {display.liquidatedAgents(liquidatedAgents.length)}
-              </h2>
-              <div className="max-h-[200px] space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-                {liquidatedAgents.map((agent) => (
-                  <div key={agent.id} className="group flex cursor-pointer flex-col items-start justify-between gap-2 sm:flex-row sm:items-center" onClick={() => setSelectedAgentId(agent.id)}>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-500/10 bg-rose-500/5 text-xs font-bold transition-colors group-hover:border-rose-500/50">
-                        {agent.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-white/60 transition-colors group-hover:text-rose-400">{agent.name}</p>
-                        <p className="text-[10px] text-white/20">{agent.strategyType}</p>
-                      </div>
-                    </div>
-                    <div className="text-left sm:text-right">
-                      <p className="text-xs font-mono font-bold text-rose-500">-100%</p>
-                      <p className="text-[10px] text-white/10">$0.0</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <AnimatePresence mode="wait">
-            {selectedAgent ? (
-              <motion.div
-                key={selectedAgent.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="rounded-2xl border border-emerald-500/30 bg-[#111] p-4 shadow-[0_0_50px_rgba(16,185,129,0.1)] sm:p-6"
-              >
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-emerald-500">
-                    <Cpu className="w-4 h-4" /> {display.agentDetailTitle}
-                  </h2>
-                  <button onClick={() => setSelectedAgentId(null)} className="text-white/20 transition-colors hover:text-white">
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10">
-                      <div className="h-6 w-6 rounded-full" style={{ backgroundColor: selectedAgent.color }} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold leading-tight text-white">{selectedAgent.name}</h3>
-                      <p className="text-xs font-mono italic text-white/40">{selectedAgent.strategy}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 rounded-xl border border-white/5 bg-black/40 p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold uppercase text-white/30">{display.openPositions}</p>
-                      <p className="text-[10px] font-bold uppercase text-white/30">
-                        {display.currentUnrealized}:
-                        <span className={cn('ml-2 font-mono', selectedAgent.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
-                          {selectedAgent.unrealizedPL >= 0 ? '+' : ''}${selectedAgent.unrealizedPL.toFixed(2)}
-                        </span>
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      {Object.values(selectedAgent.activePositions).length > 0 ? (
-                        Object.values(selectedAgent.activePositions).map((pos: Position) => (
-                          <div key={pos.symbol} className="flex flex-col gap-3 rounded-lg border border-white/5 bg-white/5 p-2 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-xs font-bold text-white">{pos.symbol}</p>
-                                <span className={cn(
-                                  'rounded border px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest',
-                                  pos.side === 'SHORT'
-                                    ? 'border-rose-500/20 bg-rose-500/10 text-rose-400'
-                                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
-                                )}>
-                                  {sideLabel(pos.side)}
-                                </span>
-                                <span className="rounded bg-emerald-500/10 px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-500">
-                                  {pos.leverage}x {display.leverageLabel}
-                                </span>
-                              </div>
-                              <p className="text-[10px] text-white/40">{display.quantityLabel} {pos.amount.toFixed(4)} @ ${pos.avgEntryPrice.toLocaleString(locale)}</p>
-                              <p className="mt-1 text-[9px] font-bold uppercase text-white/20">
-                                {display.marginLabel} ${(pos.amount * pos.avgEntryPrice / pos.leverage).toLocaleString(locale, { maximumFractionDigits: 2 })} USD {pos.leverage}x
-                              </p>
-                            </div>
-                            <div className="text-left sm:text-right">
-                              <p className="text-xs font-mono text-emerald-400">${(prices[pos.symbol] || 0).toLocaleString(locale)}</p>
-                              <p className={cn('text-[10px] font-mono', pos.unrealizedPL >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
-                                {pos.unrealizedPL >= 0 ? '+' : ''}${pos.unrealizedPL.toFixed(2)}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="py-4 text-center text-[10px] italic text-white/20">{display.noOpenPositions}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="flex items-center gap-2 text-[10px] font-bold uppercase text-white/30">
-                        <History className="w-3 h-3" /> {display.recentTrades}
-                      </p>
-                      <span className="text-[8px] uppercase text-white/20">{display.recentTradesLimit}</span>
-                    </div>
-
-                    <div className="max-h-[350px] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                      {selectedAgent.trades.length > 0 ? (
-                        selectedAgent.trades.slice(0, 20).map((trade) => (
-                          <div key={trade.id} className="group/trade rounded-xl border border-white/5 bg-black/40 p-3 transition-all hover:border-white/10">
-                            <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className={cn(
-                                  'rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider',
-                                  trade.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                                )}>
-                                  {trade.symbol} {tradeActionLabel(trade.action)} {tradeTypeLabel(trade.type)} {trade.leverage && `${trade.leverage}x`}
-                                </span>
-                                <span className="text-xs font-mono font-medium text-white">${trade.price.toLocaleString(locale)}</span>
-                              </div>
-                              <span className="text-[10px] font-mono text-white/20">
-                                {new Date(trade.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                              </span>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <Info className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500/40" />
-                              <p className="text-[11px] italic leading-relaxed text-white/60">{trade.reason}</p>
-                            </div>
-                            <div className="mt-2 flex flex-col items-start gap-2 border-t border-white/5 pt-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                              <div className="flex gap-3">
-                                <span className="text-[9px] font-bold uppercase text-white/30">
-                                  {display.marginLabel} {(trade.amount * trade.price / (trade.leverage || 1)).toLocaleString(locale, { maximumFractionDigits: 2 })} USD {trade.leverage && `${trade.leverage}x`}
-                                </span>
-                                <span className="text-[9px] font-bold uppercase text-white/30">{display.feeLabel} ${trade.fee.toFixed(4)}</span>
-                                {trade.realizedPL !== undefined && (
-                                  <span className={cn('text-[9px] font-bold uppercase', trade.realizedPL >= 0 ? 'text-emerald-500' : 'text-rose-500')}>
-                                    {display.realizedPnlLabel}: ${trade.realizedPL.toFixed(4)}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-[9px] font-bold uppercase text-white/10">ID: {trade.id}</span>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="space-y-3 py-12 text-center">
-                          <Activity className="mx-auto h-8 w-8 text-white/5" />
-                          <p className="text-[10px] italic text-white/20">{display.noTrades}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-white/5 pt-4">
-                    <div className="mb-4 flex items-center justify-between">
-                      <p className="text-[10px] font-bold uppercase text-white/30">{display.strategyOverview}</p>
-                      <span className="rounded bg-white/5 px-2 py-0.5 text-[9px] font-mono text-white/40">{selectedAgent.strategyType}</span>
-                    </div>
-                    <p className="text-[11px] leading-relaxed text-white/50">
-                      {display.strategyConfidenceText} <span className="text-emerald-500">{selectedAgent.strategyType}</span> {display.strategyConfidenceSuffix}
-                      <span className="ml-1 text-white">{(0.85 + Math.random() * 0.1).toFixed(2)}</span>
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="rounded-2xl border border-white/5 bg-[#111] p-8 text-center space-y-4 sm:p-12">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
-                  <Activity className="h-8 w-8 text-white/10" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-white/40">{display.emptySelectionTitle}</h3>
-                  <p className="mt-2 text-xs text-white/20">{display.emptySelectionBody}</p>
-                </div>
-              </div>
-            )}
-          </AnimatePresence>
-
-          <div className="rounded-2xl border border-white/5 bg-[#111] p-6">
-            <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-white/60">{display.systemLogs}</h2>
-            <div className="space-y-2 font-mono text-[10px]">
-              <div className="flex gap-2 text-emerald-500/60">
-                <span>[16:35:44]</span>
-                <span>{display.logs[0]}</span>
-              </div>
-              <div className="flex gap-2 text-white/30">
-                <span>[16:35:42]</span>
-                <span>{display.logs[1]}</span>
-              </div>
-              <div className="flex gap-2 text-white/30">
-                <span>[16:35:40]</span>
-                <span>{display.logs[2]}</span>
-              </div>
-              <div className="flex gap-2 text-amber-500/60">
-                <span>[16:35:38]</span>
-                <span>{display.logs[3]}</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </main>
       )}
 
