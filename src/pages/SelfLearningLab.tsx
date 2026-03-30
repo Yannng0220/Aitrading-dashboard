@@ -21,6 +21,17 @@ type Ai101State = {
   prices: Record<string, number>;
   appliedFingerprint: string;
   agent: Agent;
+  sampleMemory: SampleMemory;
+};
+
+type SampleMemory = {
+  processedExitTradeIds: string[];
+  learnedTradeCount: number;
+  profitableTradeCount: number;
+  losingTradeCount: number;
+  sourceSamplesLearned: number;
+  lastLearnedAt: number | null;
+  lessons: string[];
 };
 
 const STORAGE_KEY = 'ai101SandboxState:v3';
@@ -29,6 +40,7 @@ const STARTING_BALANCE = 1000;
 const TICK_MS = 5000;
 const MIN_MODEL_SAMPLE_SIZE = 12;
 const MAX_AI101_POSITIONS = 5;
+const MAX_MEMORY_LESSONS = 8;
 
 const copy = {
   zh: {
@@ -43,6 +55,13 @@ const copy = {
     strategy: 'AI#101 目前策略',
     transferTitle: '最近接收的學習模型',
     reviewTitle: 'AI#101 成效複盤',
+    sampleMemoryTitle: 'AI#101 樣本記憶',
+    sampleMemoryBody: '每次有新平倉樣本進來，AI#101 都會記住這筆單的盈虧結果並微調自己的參數。',
+    learnedTrades: '已學習樣本',
+    profitableTrades: '盈利樣本',
+    losingTrades: '虧損樣本',
+    sourceSamplesLearned: '來源樣本',
+    latestLesson: '最新學習',
     learningRounds: '接收模型次數',
     sourceAgents: '來源 AI',
     sourceTrades: '來源平倉數',
@@ -83,6 +102,13 @@ const copy = {
     strategy: 'AI#101 Current Strategy',
     transferTitle: 'Latest Received Learning Model',
     reviewTitle: 'AI#101 Performance Review',
+    sampleMemoryTitle: 'AI#101 Sample Memory',
+    sampleMemoryBody: 'Whenever a new closed-trade sample arrives, AI#101 stores the result and adjusts its own execution parameters.',
+    learnedTrades: 'Learned Trades',
+    profitableTrades: 'Winning Samples',
+    losingTrades: 'Losing Samples',
+    sourceSamplesLearned: 'Source Samples',
+    latestLesson: 'Latest Lesson',
     learningRounds: 'Model Sync Count',
     sourceAgents: 'Source AI',
     sourceTrades: 'Source Closed Trades',
@@ -181,11 +207,21 @@ function parseState(raw: string | null, model: LearningModel | null): Ai101State
     const nextAgent = model ? applyModelToAi101(parsed.agent as Agent, model) : (parsed.agent as Agent);
     if (Object.keys(nextAgent.activePositions ?? {}).length > MAX_AI101_POSITIONS) return null;
 
+    const parsedMemory = parsed.sampleMemory as Partial<SampleMemory> | undefined;
     return {
       savedAt: Number(parsed.savedAt) || Date.now(),
       prices: { ...(parsed.prices as Record<string, number>) },
       appliedFingerprint: model?.sourceFingerprint ?? 'none',
       agent: nextAgent,
+      sampleMemory: {
+        processedExitTradeIds: Array.isArray(parsedMemory?.processedExitTradeIds) ? parsedMemory!.processedExitTradeIds : [],
+        learnedTradeCount: Number(parsedMemory?.learnedTradeCount) || 0,
+        profitableTradeCount: Number(parsedMemory?.profitableTradeCount) || 0,
+        losingTradeCount: Number(parsedMemory?.losingTradeCount) || 0,
+        sourceSamplesLearned: Number(parsedMemory?.sourceSamplesLearned) || Number(model?.closedTradesReviewed) || 0,
+        lastLearnedAt: typeof parsedMemory?.lastLearnedAt === 'number' ? parsedMemory.lastLearnedAt : null,
+        lessons: Array.isArray(parsedMemory?.lessons) ? parsedMemory!.lessons.slice(0, MAX_MEMORY_LESSONS) : [],
+      },
     };
   } catch {
     return null;
@@ -200,12 +236,94 @@ function readAi101State(model: LearningModel | null) {
   }
 }
 
+function createEmptySampleMemory(model: LearningModel | null): SampleMemory {
+  return {
+    processedExitTradeIds: [],
+    learnedTradeCount: 0,
+    profitableTradeCount: 0,
+    losingTradeCount: 0,
+    sourceSamplesLearned: model?.closedTradesReviewed ?? 0,
+    lastLearnedAt: null,
+    lessons: [],
+  };
+}
+
 function buildInitialState(model: LearningModel | null, seedPrices: Record<string, number>): Ai101State {
   return {
     savedAt: Date.now(),
     prices: { ...seedPrices },
     appliedFingerprint: model?.sourceFingerprint ?? 'none',
     agent: buildAi101Agent(model, seedPrices),
+    sampleMemory: createEmptySampleMemory(model),
+  };
+}
+
+function pushLesson(memory: SampleMemory, lesson: string) {
+  return [lesson, ...memory.lessons].slice(0, MAX_MEMORY_LESSONS);
+}
+
+function learnFromTradeSamples(agent: Agent, memory: SampleMemory, lang: Language) {
+  const nextMemory: SampleMemory = {
+    ...memory,
+    processedExitTradeIds: [...memory.processedExitTradeIds],
+    lessons: [...memory.lessons],
+  };
+  let nextAgent = agent;
+
+  const newExitTrades = agent.trades
+    .filter((trade): trade is Trade & { realizedPL: number } =>
+      trade.action === 'EXIT' && typeof trade.realizedPL === 'number'
+    )
+    .filter((trade) => !nextMemory.processedExitTradeIds.includes(trade.id))
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  newExitTrades.forEach((trade) => {
+    const currentParams = nextAgent.strategyParams ?? {};
+    const pnl = trade.realizedPL;
+    const updatedParams = { ...currentParams };
+
+    if (pnl < 0) {
+      updatedParams.maxRiskPerTrade = Math.max(0.01, Number(currentParams.maxRiskPerTrade ?? 0.02) * 0.94);
+      updatedParams.threshold = Math.min(0.02, Number(currentParams.threshold ?? 0.002) * 1.03);
+      updatedParams.exitThreshold = Math.max(0.001, Number(currentParams.exitThreshold ?? 0.005) * 0.98);
+      updatedParams.leverageMax = Math.max(
+        Number(currentParams.leverageMin ?? 3),
+        Number(currentParams.leverageMax ?? 10) - 1,
+      );
+      nextMemory.losingTradeCount += 1;
+      nextMemory.lessons = pushLesson(
+        nextMemory,
+        lang === 'zh'
+          ? `${trade.symbol} 虧損 $${Math.abs(pnl).toFixed(2)}，已收緊風險、提高進場門檻並降低槓桿上限。`
+          : `${trade.symbol} lost $${Math.abs(pnl).toFixed(2)}. Risk was tightened, entry threshold raised, and leverage max reduced.`
+      );
+    } else {
+      updatedParams.takeProfit = Math.min(0.15, Number(currentParams.takeProfit ?? 0.04) * 1.02);
+      updatedParams.threshold = Math.max(0.0004, Number(currentParams.threshold ?? 0.002) * 0.995);
+      updatedParams.sensitivity = Math.min(2.5, Number(currentParams.sensitivity ?? 1) * 1.01);
+      nextMemory.profitableTradeCount += 1;
+      nextMemory.lessons = pushLesson(
+        nextMemory,
+        lang === 'zh'
+          ? `${trade.symbol} 盈利 +$${pnl.toFixed(2)}，已保留有效做法並微幅放寬優質訊號捕捉。`
+          : `${trade.symbol} earned +$${pnl.toFixed(2)}. Profitable behavior was retained and high-quality signal capture was slightly expanded.`
+      );
+    }
+
+    updatedParams.learnRevision = Number(currentParams.learnRevision ?? 0) + 1;
+    updatedParams.learningNote = nextMemory.lessons[0] ?? currentParams.learningNote ?? '';
+    nextAgent = {
+      ...nextAgent,
+      strategyParams: updatedParams,
+    };
+    nextMemory.learnedTradeCount += 1;
+    nextMemory.lastLearnedAt = trade.timestamp;
+    nextMemory.processedExitTradeIds.push(trade.id);
+  });
+
+  return {
+    agent: nextAgent,
+    memory: nextMemory,
   };
 }
 
@@ -260,6 +378,16 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
         savedAt: Date.now(),
         appliedFingerprint: nextModel.sourceFingerprint,
         agent: applyModelToAi101(prev.agent, nextModel),
+        sampleMemory: {
+          ...prev.sampleMemory,
+          sourceSamplesLearned: nextModel.closedTradesReviewed,
+          lessons: pushLesson(
+            prev.sampleMemory,
+            lang === 'zh'
+              ? `接收到 ${nextModel.closedTradesReviewed} 筆來源平倉樣本，AI#101 已更新基礎模型。`
+              : `Received ${nextModel.closedTradesReviewed} source closed-trade samples. AI#101 refreshed its base model.`
+          ),
+        },
       };
     });
 
@@ -274,6 +402,16 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           savedAt: Date.now(),
           appliedFingerprint: latest.sourceFingerprint,
           agent: applyModelToAi101(prev.agent, latest),
+          sampleMemory: {
+            ...prev.sampleMemory,
+            sourceSamplesLearned: latest.closedTradesReviewed,
+            lessons: pushLesson(
+              prev.sampleMemory,
+              lang === 'zh'
+                ? `接收到 ${latest.closedTradesReviewed} 筆來源平倉樣本，AI#101 已更新基礎模型。`
+                : `Received ${latest.closedTradesReviewed} source closed-trade samples. AI#101 refreshed its base model.`
+            ),
+          },
         };
       });
     };
@@ -324,6 +462,17 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
             latestModel && prev.appliedFingerprint !== latestModel.sourceFingerprint
               ? applyModelToAi101(prev.agent, latestModel)
               : prev.agent;
+          const nextMemory = { ...prev.sampleMemory };
+
+          if (activeModel && activeModel.closedTradesReviewed > nextMemory.sourceSamplesLearned) {
+            nextMemory.sourceSamplesLearned = activeModel.closedTradesReviewed;
+            nextMemory.lessons = pushLesson(
+              nextMemory,
+              lang === 'zh'
+                ? `新來源樣本累積到 ${activeModel.closedTradesReviewed} 筆，AI#101 已重新吸收前六名的平倉經驗。`
+                : `Source samples increased to ${activeModel.closedTradesReviewed}. AI#101 absorbed the latest top-six closed-trade feedback.`
+            );
+          }
 
           const shouldTrade = Boolean(activeModel && activeModel.closedTradesReviewed >= MIN_MODEL_SAMPLE_SIZE);
 
@@ -336,13 +485,15 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
                 ...agentWithLatestModel,
                 status: 'IDLE' as Agent['status'],
               };
+          const learned = learnFromTradeSamples(updatedAgent, nextMemory, lang);
 
           return {
             ...prev,
             savedAt: Date.now(),
             prices: allPrices,
             appliedFingerprint: latestModel?.sourceFingerprint ?? prev.appliedFingerprint,
-            agent: updatedAgent,
+            agent: learned.agent,
+            sampleMemory: learned.memory,
           };
         });
       } catch (error) {
@@ -362,6 +513,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
         .slice(0, 6),
     [sandbox.agent.trades]
   );
+  const latestLessons = useMemo(() => sandbox.sampleMemory.lessons.slice(0, 4), [sandbox.sampleMemory.lessons]);
 
   if (!model) {
     return (
@@ -461,6 +613,36 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
             ))}
           </div>
         </article>
+      </section>
+
+      <section className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
+        <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+          <BrainCircuit className="h-4 w-4 text-emerald-300" />
+          {t.sampleMemoryTitle}
+        </div>
+        <p className="mb-4 text-sm leading-relaxed text-white/70">{t.sampleMemoryBody}</p>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <SmallStat label={t.learnedTrades} value={sandbox.sampleMemory.learnedTradeCount} />
+          <SmallStat label={t.profitableTrades} value={sandbox.sampleMemory.profitableTradeCount} />
+          <SmallStat label={t.losingTrades} value={sandbox.sampleMemory.losingTradeCount} />
+          <SmallStat label={t.sourceSamplesLearned} value={sandbox.sampleMemory.sourceSamplesLearned} />
+        </div>
+        <div className="mt-4 rounded-xl border border-white/5 bg-black/30 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-white/35">{t.latestLesson}</p>
+          <div className="mt-3 space-y-2">
+            {latestLessons.length > 0 ? (
+              latestLessons.map((lesson) => (
+                <div key={lesson} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-white/75">
+                  {lesson}
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm text-white/45">
+                {lang === 'zh' ? '目前還沒有可學習的新平倉樣本。' : 'There are no new closed-trade samples to learn from yet.'}
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
