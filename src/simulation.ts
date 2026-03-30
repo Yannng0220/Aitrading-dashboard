@@ -7,6 +7,8 @@ const FEE_RATE = 0.0006;
 const BASE_BALANCE = 1000;
 const SMC_AGENT_ID = 4;
 const SMC_STRATEGY_VERSION = 'smc-five-core-v1';
+const AUTO_CLOSE_LOSS_USD = -100;
+const AUTO_CLOSE_PROFIT_USD = 200;
 
 const STRATEGY_DESCRIPTIONS = [
   'RSI mean reversion around oversold and overbought extremes.',
@@ -254,6 +256,18 @@ function unrealizedPnl(pos: Position, currentPrice: number) {
   return pos.side === 'SHORT'
     ? (pos.avgEntryPrice - currentPrice) * pos.amount
     : (currentPrice - pos.avgEntryPrice) * pos.amount;
+}
+
+function getAbsolutePnlExitReason(currentUnrealizedPnl: number) {
+  if (currentUnrealizedPnl <= AUTO_CLOSE_LOSS_USD) {
+    return `Absolute loss stop | pnl $${currentUnrealizedPnl.toFixed(2)}`;
+  }
+
+  if (currentUnrealizedPnl >= AUTO_CLOSE_PROFIT_USD) {
+    return `Absolute profit target | pnl +$${currentUnrealizedPnl.toFixed(2)}`;
+  }
+
+  return null;
 }
 
 function computeEquity(balance: number, positions: Record<string, Position>, allPrices: PriceMap) {
@@ -521,17 +535,22 @@ function executeSmcStrategy(agent: Agent, allPrices: PriceMap, allHistories: Rec
     if (!currentPrice) continue;
 
     const pos = positions[symbol];
+    const currentUnrealizedPnl = unrealizedPnl(pos, currentPrice);
     const pnlPct = pos.side === 'SHORT'
       ? (pos.avgEntryPrice - currentPrice) / pos.avgEntryPrice
       : (currentPrice - pos.avgEntryPrice) / pos.avgEntryPrice;
     const signals = buildSmcSignals(history, currentPrice, params);
 
+    const absolutePnlExitReason = getAbsolutePnlExitReason(currentUnrealizedPnl);
+    const shouldExitForAbsolutePnl = absolutePnlExitReason !== null;
     const shouldExitForRisk = pnlPct <= -params.stopLoss || pnlPct >= params.takeProfit;
     const shouldExitForStructure = signals.direction !== null && signals.direction !== pos.side && signals.choch;
     const shouldExitForInvalidation = signals.invalidationScore >= 1 && signals.confirmationScore <= 2;
 
-    if (shouldExitForRisk || shouldExitForStructure || shouldExitForInvalidation) {
-      const reason = shouldExitForRisk
+    if (shouldExitForAbsolutePnl || shouldExitForRisk || shouldExitForStructure || shouldExitForInvalidation) {
+      const reason = shouldExitForAbsolutePnl
+        ? absolutePnlExitReason
+        : shouldExitForRisk
         ? `SMC risk exit | pnl ${(pnlPct * 100).toFixed(2)}%`
         : `SMC invalidation | ${signals.reasons.join(' + ') || 'structure shift'}`;
       const result = closePosition(agent, symbol, currentPrice, positions, trades, balance, reason);
@@ -668,11 +687,16 @@ function executeGenericStrategy(agent: Agent, allPrices: PriceMap, allHistories:
     const pos = positions[symbol];
     const prevPrice = previousPrice(history, currentPrice);
     const priceChange = prevPrice === 0 ? 0 : (currentPrice - prevPrice) / prevPrice;
+    const currentUnrealizedPnl = unrealizedPnl(pos, currentPrice);
     const pnlPct = pos.side === 'SHORT'
       ? (pos.avgEntryPrice - currentPrice) / pos.avgEntryPrice
       : (currentPrice - pos.avgEntryPrice) / pos.avgEntryPrice;
 
-    const shouldExit = pnlPct <= -params.stopLoss || pnlPct >= params.takeProfit || Math.abs(priceChange) >= params.exitThreshold * 1.2;
+    const absolutePnlExitReason = getAbsolutePnlExitReason(currentUnrealizedPnl);
+    const shouldExit = Boolean(absolutePnlExitReason)
+      || pnlPct <= -params.stopLoss
+      || pnlPct >= params.takeProfit
+      || Math.abs(priceChange) >= params.exitThreshold * 1.2;
 
     if (shouldExit) {
       const result = closePosition(
@@ -682,7 +706,7 @@ function executeGenericStrategy(agent: Agent, allPrices: PriceMap, allHistories:
         positions,
         trades,
         balance,
-        `Generic exit | move ${(priceChange * 100).toFixed(2)}% | pnl ${(pnlPct * 100).toFixed(2)}%`,
+        absolutePnlExitReason ?? `Generic exit | move ${(priceChange * 100).toFixed(2)}% | pnl ${(pnlPct * 100).toFixed(2)}%`,
       );
       balance = result.balance;
       positions = result.positions;
