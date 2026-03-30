@@ -399,6 +399,59 @@ function openPosition(
   };
 }
 
+export function enforceAutoCloseThresholds(agent: Agent, allPrices: PriceMap): Partial<Agent> | null {
+  if (!agent.activePositions || Object.keys(agent.activePositions).length === 0) {
+    return null;
+  }
+
+  let balance = agent.balance;
+  let trades = [...agent.trades];
+  let status: Agent['status'] = agent.status;
+  let positions: Record<string, Position> = Object.fromEntries(
+    Object.entries(agent.activePositions).map(([symbol, pos]) => [
+      symbol,
+      {
+        ...pos,
+        side: pos.side === 'SHORT' ? 'SHORT' : 'LONG',
+      },
+    ]),
+  ) as Record<string, Position>;
+  let changed = false;
+
+  for (const symbol of Object.keys(positions)) {
+    const currentPrice = allPrices[symbol];
+    if (!currentPrice) continue;
+
+    const currentUnrealizedPnl = unrealizedPnl(positions[symbol], currentPrice);
+    const absolutePnlExitReason = getAbsolutePnlExitReason(currentUnrealizedPnl);
+    if (!absolutePnlExitReason) continue;
+
+    const result = closePosition(agent, symbol, currentPrice, positions, trades, balance, absolutePnlExitReason);
+    balance = result.balance;
+    positions = result.positions;
+    trades = result.trades;
+    status = result.status;
+    changed = true;
+  }
+
+  if (!changed) {
+    return null;
+  }
+
+  const updated = computeEquity(balance, positions, allPrices);
+  const performance = ((updated.equity - BASE_BALANCE) / BASE_BALANCE) * 100;
+
+  return {
+    balance,
+    activePositions: updated.positions,
+    equity: updated.equity,
+    unrealizedPL: updated.totalUnrealizedPL,
+    performance,
+    status,
+    trades,
+  };
+}
+
 function buildSmcSignals(history: number[], currentPrice: number, params: StrategyParams): SmcSignals {
   const recent = history.slice(-24);
   const previous = previousPrice(recent, currentPrice);

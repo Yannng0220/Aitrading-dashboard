@@ -27,7 +27,7 @@ import { cn } from './lib/utils';
 import { buildUnifiedLearningModel, clearLearningModel, type Language, writeLearningModel } from './lib/learningLab';
 import { compareAgentsByDashboardRank, getDashboardRankedAgents } from './lib/ranking';
 import { Agent, MarketData, Trade, Position } from './types';
-import { applyAgentMigrations, generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
+import { applyAgentMigrations, enforceAutoCloseThresholds, generateAgents, executeStrategy, fetchAllBybitTickers } from './simulation';
 import Learning from './pages/Learning';
 import LearningAgentDetail from './pages/LearningAgentDetail';
 import SelfLearningLab from './pages/SelfLearningLab';
@@ -120,7 +120,12 @@ function AppContent() {
 
   const applySavedAgents = (nextAgents: Agent[], savedAt: number) => {
     latestSavedAtRef.current = savedAt;
-    setAgents(applyAgentMigrations(nextAgents, Object.keys(pricesRef.current)));
+    setAgents(
+      applyAgentMigrations(nextAgents, Object.keys(pricesRef.current)).map((agent) => {
+        const forcedClose = enforceAutoCloseThresholds(agent, pricesRef.current);
+        return forcedClose ? { ...agent, ...forcedClose } : agent;
+      })
+    );
   };
 
   // Initialize agents and market history
