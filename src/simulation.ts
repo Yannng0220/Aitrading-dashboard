@@ -1,6 +1,9 @@
 ﻿import { Agent, Position, Trade } from './types';
 
 export type PriceMap = Record<string, number>;
+export type StrategyExecutionOptions = {
+  entriesEnabled?: boolean;
+};
 
 const DEFAULT_SYMBOLS = ['BTCUSDT'];
 const FEE_RATE = 0.0006;
@@ -401,6 +404,48 @@ function openPosition(
   };
 }
 
+export function liquidateAgentPositions(agent: Agent, allPrices: PriceMap, reason: string): Partial<Agent> | null {
+  if (!agent.activePositions || Object.keys(agent.activePositions).length === 0) {
+    return null;
+  }
+
+  let balance = agent.balance;
+  let trades = [...agent.trades];
+  let status: Agent['status'] = agent.status;
+  let positions: Record<string, Position> = Object.fromEntries(
+    Object.entries(agent.activePositions).map(([symbol, pos]) => [
+      symbol,
+      {
+        ...pos,
+        side: pos.side === 'SHORT' ? 'SHORT' : 'LONG',
+      },
+    ]),
+  ) as Record<string, Position>;
+
+  for (const symbol of Object.keys(positions)) {
+    const currentPrice = allPrices[symbol];
+    if (!currentPrice) continue;
+    const result = closePosition(agent, symbol, currentPrice, positions, trades, balance, reason);
+    balance = result.balance;
+    positions = result.positions;
+    trades = result.trades;
+    status = result.status;
+  }
+
+  const updated = computeEquity(balance, positions, allPrices);
+  const performance = ((updated.equity - BASE_BALANCE) / BASE_BALANCE) * 100;
+
+  return {
+    balance,
+    activePositions: updated.positions,
+    equity: updated.equity,
+    unrealizedPL: updated.totalUnrealizedPL,
+    performance,
+    status,
+    trades,
+  };
+}
+
 export function enforceAutoCloseThresholds(agent: Agent, allPrices: PriceMap): Partial<Agent> | null {
   const params = getStrategyParams(agent);
   if (!params.useAbsoluteUsdExit) {
@@ -574,7 +619,13 @@ function buildSmcSignals(history: number[], currentPrice: number, params: Strate
   };
 }
 
-function executeSmcStrategy(agent: Agent, allPrices: PriceMap, allHistories: Record<string, number[]>): Partial<Agent> {
+function executeSmcStrategy(
+  agent: Agent,
+  allPrices: PriceMap,
+  allHistories: Record<string, number[]>,
+  options: StrategyExecutionOptions = {},
+): Partial<Agent> {
+  const entriesEnabled = options.entriesEnabled ?? true;
   const params = getStrategyParams(agent);
   let balance = agent.balance;
   let trades = [...agent.trades];
@@ -619,6 +670,28 @@ function executeSmcStrategy(agent: Agent, allPrices: PriceMap, allHistories: Rec
       trades = result.trades;
       status = result.status;
     }
+  }
+
+  if (!entriesEnabled) {
+    const updated = computeEquity(balance, positions, allPrices);
+    const performance = ((updated.equity - BASE_BALANCE) / BASE_BALANCE) * 100;
+
+    return {
+      balance,
+      activePositions: updated.positions,
+      equity: updated.equity,
+      unrealizedPL: updated.totalUnrealizedPL,
+      performance,
+      status,
+      trades,
+      strategyType: 'SMC / CoinAnk',
+      strategy:
+        'SMC five-core workflow: BOS, CHoCH, Order Block, FVG, Liquidity Sweep, plus CoinAnk-style OI/CVD/liquidation/orderflow proxy confirmation before layered entries.',
+      strategyParams: {
+        ...params,
+        logicVersion: SMC_STRATEGY_VERSION,
+      },
+    };
   }
 
   const usedMargin = Object.values(positions).reduce((sum, pos) => sum + (pos.amount * pos.avgEntryPrice / pos.leverage), 0);
@@ -713,7 +786,13 @@ function executeSmcStrategy(agent: Agent, allPrices: PriceMap, allHistories: Rec
   };
 }
 
-function executeGenericStrategy(agent: Agent, allPrices: PriceMap, allHistories: Record<string, number[]>): Partial<Agent> {
+function executeGenericStrategy(
+  agent: Agent,
+  allPrices: PriceMap,
+  allHistories: Record<string, number[]>,
+  options: StrategyExecutionOptions = {},
+): Partial<Agent> {
+  const entriesEnabled = options.entriesEnabled ?? true;
   if (agent.equity <= 0) {
     return {
       status: 'IDLE',
@@ -773,6 +852,21 @@ function executeGenericStrategy(agent: Agent, allPrices: PriceMap, allHistories:
       trades = result.trades;
       status = result.status;
     }
+  }
+
+  if (!entriesEnabled) {
+    const updated = computeEquity(balance, positions, allPrices);
+    const performance = ((updated.equity - BASE_BALANCE) / BASE_BALANCE) * 100;
+
+    return {
+      balance,
+      activePositions: updated.positions,
+      equity: updated.equity,
+      unrealizedPL: updated.totalUnrealizedPL,
+      performance,
+      status,
+      trades,
+    };
   }
 
   const usedMargin = Object.values(positions).reduce((sum, pos) => sum + (pos.amount * pos.avgEntryPrice / pos.leverage), 0);
@@ -864,11 +958,12 @@ export const executeStrategy = (
   agent: Agent,
   allPrices: PriceMap,
   allHistories: Record<string, number[]>,
+  options: StrategyExecutionOptions = {},
 ): Partial<Agent> => {
   if (agent.id === SMC_AGENT_ID) {
     const smcAgent = applyAgentMigrations([agent])[0];
-    return executeSmcStrategy(smcAgent, allPrices, allHistories);
+    return executeSmcStrategy(smcAgent, allPrices, allHistories, options);
   }
 
-  return executeGenericStrategy(agent, allPrices, allHistories);
+  return executeGenericStrategy(agent, allPrices, allHistories, options);
 };

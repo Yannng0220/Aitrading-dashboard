@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bot, BrainCircuit, History, Info, Send, ShieldAlert, TrendingUp } from 'lucide-react';
 import { Agent, Position, Trade } from '../types';
-import { executeStrategy, fetchAllBybitTickers } from '../simulation';
+import { executeStrategy, fetchAllBybitTickers, liquidateAgentPositions } from '../simulation';
 import { cn } from '../lib/utils';
 import {
   buildAgentRecommendation,
@@ -34,6 +34,15 @@ type SampleMemory = {
   lessons: string[];
 };
 
+type ExternalRiskSnapshot = {
+  fetchedAt: string | null;
+  riskScore: number;
+  blockNewEntries: boolean;
+  forceExit: boolean;
+  reasons: string[];
+  source: string;
+};
+
 const STORAGE_KEY = 'ai101SandboxState:v5';
 const AI_101_ID = 100;
 const STARTING_BALANCE = 100;
@@ -41,6 +50,16 @@ const TICK_MS = 5000;
 const MIN_MODEL_SAMPLE_SIZE = 12;
 const MAX_AI101_POSITIONS = 5;
 const MAX_MEMORY_LESSONS = 8;
+const EXTERNAL_RISK_REFRESH_MS = 30000;
+
+const defaultExternalRisk: ExternalRiskSnapshot = {
+  fetchedAt: null,
+  riskScore: 0,
+  blockNewEntries: false,
+  forceExit: false,
+  reasons: [],
+  source: 'https://www.pizzint.watch/polyglobe',
+};
 
 const copy = {
   zh: {
@@ -57,6 +76,15 @@ const copy = {
     reviewTitle: 'AI#101 成效複盤',
     sampleMemoryTitle: 'AI#101 樣本記憶',
     sampleMemoryBody: '每次有新平倉樣本進來，AI#101 都會記住這筆單的盈虧結果並微調自己的參數。',
+    externalRiskTitle: '外部風險濾網',
+    externalRiskBody: 'AI#101 會參考 Polyglobe 的 OSINT 與地緣市場風險訊號，再決定是否允許開新單。',
+    riskScore: '風險分數',
+    entryGate: '開單狀態',
+    riskBlocked: '暫停新單',
+    riskClear: '可正常開單',
+    blackSwanExit: '黑天鵝保護',
+    blackSwanDetected: '已觸發急跌保護',
+    blackSwanSafe: '未觸發急跌保護',
     learnedTrades: '已學習樣本',
     profitableTrades: '盈利樣本',
     losingTrades: '虧損樣本',
@@ -104,6 +132,15 @@ const copy = {
     reviewTitle: 'AI#101 Performance Review',
     sampleMemoryTitle: 'AI#101 Sample Memory',
     sampleMemoryBody: 'Whenever a new closed-trade sample arrives, AI#101 stores the result and adjusts its own execution parameters.',
+    externalRiskTitle: 'External Risk Filter',
+    externalRiskBody: 'AI#101 checks Polyglobe OSINT and geopolitical market signals before allowing new entries.',
+    riskScore: 'Risk Score',
+    entryGate: 'Entry Status',
+    riskBlocked: 'New entries paused',
+    riskClear: 'New entries allowed',
+    blackSwanExit: 'Black Swan Guard',
+    blackSwanDetected: 'Crash protection triggered',
+    blackSwanSafe: 'Crash protection idle',
     learnedTrades: 'Learned Trades',
     profitableTrades: 'Winning Samples',
     losingTrades: 'Losing Samples',
@@ -366,14 +403,95 @@ function getPositionSize(position: Position) {
   return position.amount * position.avgEntryPrice / position.leverage;
 }
 
+function detectBlackSwanDrop(prices: Record<string, number>, historyMap: Record<string, number[]>) {
+  const majors = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+  const majorMoves = majors
+    .map((symbol) => {
+      const history = historyMap[symbol] ?? [];
+      const currentPrice = prices[symbol];
+      const previousPrice = history.length >= 2 ? history[history.length - 2] : history[history.length - 1];
+      if (!currentPrice || !previousPrice) return null;
+      return { symbol, move: (currentPrice - previousPrice) / previousPrice };
+    })
+    .filter((item): item is { symbol: string; move: number } => item !== null);
+
+  const hardCrash = majorMoves.some((item) => item.move <= -0.05);
+  const broadCrashCount = majorMoves.filter((item) => item.move <= -0.035).length;
+  const broadMarketDrop = Object.entries(prices)
+    .slice(0, 20)
+    .map(([symbol, currentPrice]) => {
+      const history = historyMap[symbol] ?? [];
+      const previousPrice = history.length >= 2 ? history[history.length - 2] : history[history.length - 1];
+      if (!previousPrice) return 0;
+      return (currentPrice - previousPrice) / previousPrice;
+    })
+    .filter((move) => move <= -0.02).length;
+
+  const triggered = hardCrash || broadCrashCount >= 2 || broadMarketDrop >= 6;
+  const reasons = majorMoves
+    .filter((item) => item.move <= -0.03)
+    .map((item) => `${item.symbol} ${(item.move * 100).toFixed(2)}%`);
+
+  if (broadMarketDrop >= 6) {
+    reasons.push(`breadth ${broadMarketDrop}/20 below -2%`);
+  }
+
+  return {
+    triggered,
+    reasons,
+  };
+}
+
+async function fetchExternalRiskSnapshot(): Promise<ExternalRiskSnapshot> {
+  try {
+    const response = await fetch('/api/polyglobe-risk');
+    if (!response.ok) {
+      throw new Error(`risk status ${response.status}`);
+    }
+    const data = await response.json();
+    return {
+      fetchedAt: typeof data?.fetchedAt === 'string' ? data.fetchedAt : null,
+      riskScore: Number(data?.riskScore) || 0,
+      blockNewEntries: Boolean(data?.blockNewEntries),
+      forceExit: Boolean(data?.forceExit),
+      reasons: Array.isArray(data?.reasons) ? data.reasons : [],
+      source: typeof data?.source === 'string' ? data.source : defaultExternalRisk.source,
+    };
+  } catch (error) {
+    console.warn('polyglobe risk fetch failed', error);
+    return defaultExternalRisk;
+  }
+}
+
 export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabProps) {
   const t = copy[lang];
   const [model, setModel] = useState<LearningModel | null>(() => readLearningModel());
+  const [externalRisk, setExternalRisk] = useState<ExternalRiskSnapshot>(defaultExternalRisk);
+  const [marketCrashActive, setMarketCrashActive] = useState(false);
   const [sandbox, setSandbox] = useState<Ai101State>(() => {
     const initialModel = readLearningModel();
     return readAi101State(initialModel) ?? buildInitialState(initialModel, seedPrices);
   });
   const historyMapRef = useRef<Record<string, number[]>>({});
+  const lastRiskFetchAtRef = useRef(0);
+  const externalRiskRef = useRef<ExternalRiskSnapshot>(defaultExternalRisk);
+
+  useEffect(() => {
+    externalRiskRef.current = externalRisk;
+  }, [externalRisk]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchExternalRiskSnapshot().then((snapshot) => {
+      if (!cancelled) {
+        setExternalRisk(snapshot);
+        lastRiskFetchAtRef.current = Date.now();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const nextModel = readLearningModel();
@@ -455,6 +573,12 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           }));
         }
 
+        if (Date.now() - lastRiskFetchAtRef.current >= EXTERNAL_RISK_REFRESH_MS) {
+          const latestRisk = await fetchExternalRiskSnapshot();
+          setExternalRisk(latestRisk);
+          lastRiskFetchAtRef.current = Date.now();
+        }
+
         const allPrices = await fetchAllBybitTickers();
         if (Object.keys(allPrices).length === 0) return;
 
@@ -463,8 +587,11 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           historyMapRef.current[symbol] = [...currentHistory.slice(-19), allPrices[symbol]];
         });
 
+        setMarketCrashActive(detectBlackSwanDrop(allPrices, historyMapRef.current).triggered);
+
         setSandbox((prev) => {
           const activeModel = latestModel ?? model;
+          const marketCrash = detectBlackSwanDrop(allPrices, historyMapRef.current);
           const agentWithLatestModel =
             latestModel && prev.appliedFingerprint !== latestModel.sourceFingerprint
               ? applyModelToAi101(prev.agent, latestModel)
@@ -482,16 +609,32 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           }
 
           const shouldTrade = Boolean(activeModel && activeModel.closedTradesReviewed >= MIN_MODEL_SAMPLE_SIZE);
+          const liveRisk = externalRiskRef.current;
+          const shouldBlockNewEntries = liveRisk.blockNewEntries || marketCrash.triggered;
+          const shouldForceExit = liveRisk.forceExit || marketCrash.triggered;
 
-          const updatedAgent = shouldTrade
+          const updatedAgent = shouldForceExit
             ? {
                 ...agentWithLatestModel,
-                ...executeStrategy(agentWithLatestModel, allPrices, historyMapRef.current),
+                ...(liquidateAgentPositions(
+                  agentWithLatestModel,
+                  allPrices,
+                  marketCrash.triggered
+                    ? `Black swan exit | ${marketCrash.reasons.join(' | ') || 'broad market shock'}`
+                    : `External risk exit | ${liveRisk.reasons.join(' | ') || 'polyglobe risk spike'}`
+                ) ?? { status: 'IDLE' as Agent['status'] }),
               }
-            : {
-                ...agentWithLatestModel,
-                status: 'IDLE' as Agent['status'],
-              };
+            : shouldTrade
+              ? {
+                  ...agentWithLatestModel,
+                  ...executeStrategy(agentWithLatestModel, allPrices, historyMapRef.current, {
+                    entriesEnabled: !shouldBlockNewEntries,
+                  }),
+                }
+              : {
+                  ...agentWithLatestModel,
+                  status: 'IDLE' as Agent['status'],
+                };
           const learned = learnFromTradeSamples(updatedAgent, nextMemory, lang);
 
           return {
@@ -649,6 +792,27 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
               </div>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
+        <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
+          <ShieldAlert className="h-4 w-4 text-amber-300" />
+          {t.externalRiskTitle}
+        </div>
+        <p className="mb-4 text-sm leading-relaxed text-white/70">{t.externalRiskBody}</p>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <SmallStat label={t.riskScore} value={externalRisk.riskScore} />
+          <SmallStat label={t.entryGate} value={externalRisk.blockNewEntries ? t.riskBlocked : t.riskClear} />
+          <SmallStat label={t.blackSwanExit} value={marketCrashActive ? t.blackSwanDetected : t.blackSwanSafe} />
+          <SmallStat label="Source" value="Polyglobe" />
+        </div>
+        <div className="mt-4 space-y-2">
+          {(externalRisk.reasons.length > 0 ? externalRisk.reasons : [lang === 'zh' ? '目前外部風險訊號平穩。' : 'External risk signals are currently calm.']).map((reason) => (
+            <div key={reason} className="rounded-lg border border-white/5 bg-black/30 px-3 py-2 text-sm text-white/75">
+              {reason}
+            </div>
+          ))}
         </div>
       </section>
 
