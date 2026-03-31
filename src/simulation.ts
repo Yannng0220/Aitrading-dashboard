@@ -54,6 +54,7 @@ type StrategyParams = {
   preferredSymbols?: string[];
   scanCount?: number;
   maxConcurrentPositions?: number;
+  useAbsoluteUsdExit?: boolean;
 };
 
 type SmcSignals = {
@@ -100,6 +101,7 @@ function getStrategyParams(agent: Agent): StrategyParams {
     preferredSymbols: params.preferredSymbols ?? [],
     scanCount: params.scanCount ?? 15,
     maxConcurrentPositions: params.maxConcurrentPositions ?? 99,
+    useAbsoluteUsdExit: params.useAbsoluteUsdExit ?? true,
     logicVersion: params.logicVersion,
   };
 }
@@ -400,6 +402,11 @@ function openPosition(
 }
 
 export function enforceAutoCloseThresholds(agent: Agent, allPrices: PriceMap): Partial<Agent> | null {
+  const params = getStrategyParams(agent);
+  if (!params.useAbsoluteUsdExit) {
+    return null;
+  }
+
   if (!agent.activePositions || Object.keys(agent.activePositions).length === 0) {
     return null;
   }
@@ -594,7 +601,7 @@ function executeSmcStrategy(agent: Agent, allPrices: PriceMap, allHistories: Rec
       : (currentPrice - pos.avgEntryPrice) / pos.avgEntryPrice;
     const signals = buildSmcSignals(history, currentPrice, params);
 
-    const absolutePnlExitReason = getAbsolutePnlExitReason(currentUnrealizedPnl);
+    const absolutePnlExitReason = params.useAbsoluteUsdExit ? getAbsolutePnlExitReason(currentUnrealizedPnl) : null;
     const shouldExitForAbsolutePnl = absolutePnlExitReason !== null;
     const shouldExitForRisk = pnlPct <= -params.stopLoss || pnlPct >= params.takeProfit;
     const shouldExitForStructure = signals.direction !== null && signals.direction !== pos.side && signals.choch;
@@ -745,7 +752,7 @@ function executeGenericStrategy(agent: Agent, allPrices: PriceMap, allHistories:
       ? (pos.avgEntryPrice - currentPrice) / pos.avgEntryPrice
       : (currentPrice - pos.avgEntryPrice) / pos.avgEntryPrice;
 
-    const absolutePnlExitReason = getAbsolutePnlExitReason(currentUnrealizedPnl);
+    const absolutePnlExitReason = params.useAbsoluteUsdExit ? getAbsolutePnlExitReason(currentUnrealizedPnl) : null;
     const shouldExit = Boolean(absolutePnlExitReason)
       || pnlPct <= -params.stopLoss
       || pnlPct >= params.takeProfit

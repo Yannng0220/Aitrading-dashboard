@@ -34,7 +34,7 @@ type SampleMemory = {
   lessons: string[];
 };
 
-const STORAGE_KEY = 'ai101SandboxState:v4';
+const STORAGE_KEY = 'ai101SandboxState:v5';
 const AI_101_ID = 100;
 const STARTING_BALANCE = 100;
 const TICK_MS = 5000;
@@ -171,6 +171,7 @@ function buildAi101Agent(model: LearningModel | null, seedPrices: Record<string,
       maxRiskPerTrade: model?.params.maxRiskPerTrade ?? 0.02,
       scanCount: model?.params.scanCount ?? 10,
       maxConcurrentPositions: MAX_AI101_POSITIONS,
+      useAbsoluteUsdExit: false,
       preferredSymbols,
       learningModelFingerprint: model?.sourceFingerprint ?? 'none',
       learnRevision: 0,
@@ -190,6 +191,7 @@ function applyModelToAi101(agent: Agent, model: LearningModel) {
       timeframe: 'SHORT',
       preferredSymbols: model.params.preferredSymbols,
       maxConcurrentPositions: MAX_AI101_POSITIONS,
+      useAbsoluteUsdExit: false,
       learningModelFingerprint: model.sourceFingerprint,
       learningNote: model.transferNote,
       learnRevision: Number(agent.strategyParams?.learnRevision ?? 0) + 1,
@@ -286,6 +288,8 @@ function learnFromTradeSamples(agent: Agent, memory: SampleMemory, lang: Languag
       updatedParams.maxRiskPerTrade = Math.max(0.01, Number(currentParams.maxRiskPerTrade ?? 0.02) * 0.94);
       updatedParams.threshold = Math.min(0.02, Number(currentParams.threshold ?? 0.002) * 1.03);
       updatedParams.exitThreshold = Math.max(0.001, Number(currentParams.exitThreshold ?? 0.005) * 0.98);
+      updatedParams.stopLoss = Math.max(0.006, Number(currentParams.stopLoss ?? 0.02) * 0.94);
+      updatedParams.takeProfit = Math.max(0.012, Number(currentParams.takeProfit ?? 0.04) * 0.97);
       updatedParams.leverageMax = Math.max(
         Number(currentParams.leverageMin ?? 3),
         Number(currentParams.leverageMax ?? 10) - 1,
@@ -300,6 +304,8 @@ function learnFromTradeSamples(agent: Agent, memory: SampleMemory, lang: Languag
     } else {
       updatedParams.takeProfit = Math.min(0.15, Number(currentParams.takeProfit ?? 0.04) * 1.02);
       updatedParams.threshold = Math.max(0.0004, Number(currentParams.threshold ?? 0.002) * 0.995);
+      updatedParams.exitThreshold = Math.min(0.04, Number(currentParams.exitThreshold ?? 0.005) * 1.01);
+      updatedParams.stopLoss = Math.min(0.05, Number(currentParams.stopLoss ?? 0.02) * 1.01);
       updatedParams.sensitivity = Math.min(2.5, Number(currentParams.sensitivity ?? 1) * 1.01);
       nextMemory.profitableTradeCount += 1;
       nextMemory.lessons = pushLesson(
@@ -311,6 +317,7 @@ function learnFromTradeSamples(agent: Agent, memory: SampleMemory, lang: Languag
     }
 
     updatedParams.learnRevision = Number(currentParams.learnRevision ?? 0) + 1;
+    updatedParams.useAbsoluteUsdExit = false;
     updatedParams.learningNote = nextMemory.lessons[0] ?? currentParams.learningNote ?? '';
     nextAgent = {
       ...nextAgent,
