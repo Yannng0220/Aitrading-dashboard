@@ -30,6 +30,7 @@ type SampleMemory = {
   profitableTradeCount: number;
   losingTradeCount: number;
   sourceSamplesLearned: number;
+  modelReceiveCount: number;
   lastLearnedAt: number | null;
   lessons: string[];
 };
@@ -217,7 +218,8 @@ function buildAi101Agent(model: LearningModel | null, seedPrices: Record<string,
   };
 }
 
-function applyModelToAi101(agent: Agent, model: LearningModel) {
+function applyModelToAi101(agent: Agent, model: LearningModel, options?: { incrementReceiveCount?: boolean }) {
+  const incrementReceiveCount = options?.incrementReceiveCount ?? true;
   return {
     ...agent,
     strategyType: 'Unified Learning Model',
@@ -231,7 +233,7 @@ function applyModelToAi101(agent: Agent, model: LearningModel) {
       useAbsoluteUsdExit: false,
       learningModelFingerprint: model.sourceFingerprint,
       learningNote: model.transferNote,
-      learnRevision: Number(agent.strategyParams?.learnRevision ?? 0) + 1,
+      learnRevision: Number(agent.strategyParams?.learnRevision ?? 0) + (incrementReceiveCount ? 1 : 0),
     },
   };
 }
@@ -243,7 +245,7 @@ function parseState(raw: string | null, model: LearningModel | null): Ai101State
     const parsed = JSON.parse(raw) as Partial<Ai101State>;
     if (!parsed || !parsed.agent || !parsed.prices || typeof parsed.prices !== 'object') return null;
 
-    const nextAgent = model ? applyModelToAi101(parsed.agent as Agent, model) : (parsed.agent as Agent);
+    const nextAgent = model ? applyModelToAi101(parsed.agent as Agent, model, { incrementReceiveCount: false }) : (parsed.agent as Agent);
     if (Object.keys(nextAgent.activePositions ?? {}).length > MAX_AI101_POSITIONS) return null;
 
     const parsedMemory = parsed.sampleMemory as Partial<SampleMemory> | undefined;
@@ -258,6 +260,7 @@ function parseState(raw: string | null, model: LearningModel | null): Ai101State
         profitableTradeCount: Number(parsedMemory?.profitableTradeCount) || 0,
         losingTradeCount: Number(parsedMemory?.losingTradeCount) || 0,
         sourceSamplesLearned: Number(parsedMemory?.sourceSamplesLearned) || Number(model?.closedTradesReviewed) || 0,
+        modelReceiveCount: Number(parsedMemory?.modelReceiveCount) || 0,
         lastLearnedAt: typeof parsedMemory?.lastLearnedAt === 'number' ? parsedMemory.lastLearnedAt : null,
         lessons: Array.isArray(parsedMemory?.lessons) ? parsedMemory!.lessons.slice(0, MAX_MEMORY_LESSONS) : [],
       },
@@ -282,6 +285,7 @@ function createEmptySampleMemory(model: LearningModel | null): SampleMemory {
     profitableTradeCount: 0,
     losingTradeCount: 0,
     sourceSamplesLearned: model?.closedTradesReviewed ?? 0,
+    modelReceiveCount: 0,
     lastLearnedAt: null,
     lessons: [],
   };
@@ -505,6 +509,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
         agent: applyModelToAi101(prev.agent, nextModel),
         sampleMemory: {
           ...prev.sampleMemory,
+          modelReceiveCount: prev.sampleMemory.modelReceiveCount + 1,
           sourceSamplesLearned: nextModel.closedTradesReviewed,
           lessons: pushLesson(
             prev.sampleMemory,
@@ -529,6 +534,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           agent: applyModelToAi101(prev.agent, latest),
           sampleMemory: {
             ...prev.sampleMemory,
+            modelReceiveCount: prev.sampleMemory.modelReceiveCount + 1,
             sourceSamplesLearned: latest.closedTradesReviewed,
             lessons: pushLesson(
               prev.sampleMemory,
@@ -570,6 +576,10 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
             savedAt: Date.now(),
             appliedFingerprint: latestModel.sourceFingerprint,
             agent: applyModelToAi101(prev.agent, latestModel),
+            sampleMemory: {
+              ...prev.sampleMemory,
+              modelReceiveCount: prev.sampleMemory.modelReceiveCount + 1,
+            },
           }));
         }
 
@@ -594,7 +604,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           const marketCrash = detectBlackSwanDrop(allPrices, historyMapRef.current);
           const agentWithLatestModel =
             latestModel && prev.appliedFingerprint !== latestModel.sourceFingerprint
-              ? applyModelToAi101(prev.agent, latestModel)
+              ? applyModelToAi101(prev.agent, latestModel, { incrementReceiveCount: false })
               : prev.agent;
           const nextMemory = { ...prev.sampleMemory };
 
@@ -727,7 +737,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <SmallStat label={t.learningRounds} value={Number(sandbox.agent.strategyParams?.learnRevision ?? 0)} />
+            <SmallStat label={t.learningRounds} value={sandbox.sampleMemory.modelReceiveCount} />
             <SmallStat label={t.transferStatus} value={t.transferReady} />
           </div>
 
