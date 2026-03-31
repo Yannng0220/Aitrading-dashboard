@@ -34,9 +34,9 @@ type SampleMemory = {
   lessons: string[];
 };
 
-const STORAGE_KEY = 'ai101SandboxState:v3';
+const STORAGE_KEY = 'ai101SandboxState:v4';
 const AI_101_ID = 100;
-const STARTING_BALANCE = 1000;
+const STARTING_BALANCE = 100;
 const TICK_MS = 5000;
 const MIN_MODEL_SAMPLE_SIZE = 12;
 const MAX_AI101_POSITIONS = 5;
