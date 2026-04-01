@@ -36,6 +36,7 @@ const AGENT_COUNT = 100;
 const AGENTS_STORAGE_KEY = 'agentsState:v2';
 const DEVICE_ID_STORAGE_KEY = 'agentsDeviceId:v1';
 const UI_LANG_STORAGE_KEY = 'uiLang:v1';
+const VISIT_SESSION_STORAGE_KEY = 'siteVisitSession:v1';
 
 type SavedAgentsState = {
   savedAt: number;
@@ -100,6 +101,7 @@ function AppContent() {
       return 'zh';
     }
   });
+  const [visitCount, setVisitCount] = useState<number | null>(null);
   const [startedAt, setStartedAt] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('startedAt');
@@ -404,6 +406,57 @@ function AppContent() {
   }, [lang]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const syncVisitCount = async () => {
+      let sessionId = '';
+
+      try {
+        const existing = sessionStorage.getItem(VISIT_SESSION_STORAGE_KEY);
+        if (existing) {
+          sessionId = existing;
+        } else {
+          sessionId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `visit-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          sessionStorage.setItem(VISIT_SESSION_STORAGE_KEY, sessionId);
+        }
+      } catch {
+        sessionId = `visit-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      try {
+        const response = await fetch('/api/visits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
+        const data = await response.json();
+        if (!cancelled) {
+          setVisitCount(Number(data?.count) || 0);
+        }
+      } catch (error) {
+        console.error('Failed to sync visit count:', error);
+        try {
+          const response = await fetch('/api/visits');
+          const data = await response.json();
+          if (!cancelled) {
+            setVisitCount(Number(data?.count) || 0);
+          }
+        } catch (fallbackError) {
+          console.error('Failed to load visit count:', fallbackError);
+        }
+      }
+    };
+
+    syncVisitCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isHydrated || agents.length !== AGENT_COUNT) return;
     const learningModel = buildUnifiedLearningModel(agents, lang);
     if (learningModel.closedTradesReviewed > 0) {
@@ -476,6 +529,7 @@ function AppContent() {
         footerAbout: '關於',
         footerPrivacy: '隱私',
         footerDashboard: '儀表板',
+        footerVisits: '訪問次數',
         footerCopyright: '© 2026 Yang-RotBot Trading 模擬交易環境',
         aboutTitle: '關於 Yang-RotBot Trading',
         aboutDescription: 'Yang-RotBot Trading 是一個以瀏覽器為基礎的交易模擬儀表板，用來展示多代理策略行為、介面設計，以及教育用途的市場分析。',
@@ -523,6 +577,7 @@ function AppContent() {
         footerAbout: 'About',
         footerPrivacy: 'Privacy',
         footerDashboard: 'Dashboard',
+        footerVisits: 'Visits',
         footerCopyright: '© 2026 Yang-RotBot Trading Simulation Trading Environment',
         aboutTitle: 'About Yang-RotBot Trading',
         aboutDescription: 'Yang-RotBot Trading is a browser-based trading simulation dashboard built to demonstrate multi-agent strategy behavior, interface design, and educational market analysis.',
@@ -1130,8 +1185,14 @@ function AppContent() {
       </AnimatePresence>
 
       {/* Footer */}
-      <footer className="max-w-[1600px] mx-auto px-6 py-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">{ui.footerCopyright}</p>
+      <footer className="max-w-[1600px] mx-auto px-6 py-8 border-t border-white/5 flex flex-col items-center justify-between gap-4 md:flex-row">
+        <div className="flex flex-col items-center gap-2 md:items-start">
+          <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">{ui.footerCopyright}</p>
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/45">
+            <span>{ui.footerVisits}</span>
+            <span className="font-mono text-emerald-400">{visitCount === null ? '--' : visitCount.toLocaleString(locale)}</span>
+          </div>
+        </div>
         <div className="flex gap-6">
           <button onClick={() => navigate('/about')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerAbout}</button>
           <button onClick={() => navigate('/privacy')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerPrivacy}</button>
