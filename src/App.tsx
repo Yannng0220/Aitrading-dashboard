@@ -1334,42 +1334,58 @@ function LandingPage({
   locale: string;
   onOpenDashboard: () => void;
 }) {
-  const convoy = lang === 'zh'
+  const floatingCards = lang === 'zh'
     ? [
-        { title: '訊號礦車', body: '從市場波動中挖出可解釋訊號', tone: 'emerald' as const, delay: 0 },
-        { title: '學習礦車', body: '把高排名樣本帶回 AI#101 沙盒', tone: 'amber' as const, delay: 0.15 },
-        { title: '風控礦車', body: '先檢查外部風險，再決定進場方向', tone: 'sky' as const, delay: 0.3 },
+        { label: '多代理系統', value: '100 AI', body: '主儀表板獨立運行', tone: 'emerald' as const, delay: 0 },
+        { label: '學習引擎', value: 'AI#101', body: '沙盒驗證新模型', tone: 'sky' as const, delay: 0.12 },
+        { label: '外部風險', value: 'Polyglobe', body: '地緣與 OSINT 濾網', tone: 'amber' as const, delay: 0.24 },
       ]
     : [
-        { title: 'Signal Cart', body: 'Mine interpretable market signals from price motion', tone: 'emerald' as const, delay: 0 },
-        { title: 'Learning Cart', body: 'Bring top-ranked samples back into the AI#101 sandbox', tone: 'amber' as const, delay: 0.15 },
-        { title: 'Risk Cart', body: 'Check external risk before choosing the trade direction', tone: 'sky' as const, delay: 0.3 },
+        { label: 'Multi-Agent Core', value: '100 AI', body: 'Main dashboard state', tone: 'emerald' as const, delay: 0 },
+        { label: 'Learning Engine', value: 'AI#101', body: 'Sandbox model validation', tone: 'sky' as const, delay: 0.12 },
+        { label: 'External Risk', value: 'Polyglobe', body: 'Geopolitical and OSINT filter', tone: 'amber' as const, delay: 0.24 },
       ];
 
   return (
     <main className="mx-auto max-w-[1600px] space-y-8 p-4 sm:p-6">
-      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.16),transparent_22%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.14),transparent_22%),linear-gradient(135deg,#19110a_0%,#0f1618_40%,#060606_100%)] px-6 py-8 shadow-[0_0_60px_rgba(245,158,11,0.1)] sm:px-8 sm:py-10 lg:px-12 lg:py-14">
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.34)_50%,rgba(0,0,0,0.72)_100%)]" />
-        <div className="absolute left-[-10%] top-[-12%] h-56 w-56 rounded-full bg-amber-400/10 blur-3xl" />
-        <div className="absolute right-[-8%] top-[10%] h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
-        <div className="relative grid gap-8 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
+      <section className="relative overflow-hidden rounded-[36px] border border-white/10 bg-[radial-gradient(circle_at_15%_20%,rgba(16,185,129,0.2),transparent_24%),radial-gradient(circle_at_80%_18%,rgba(56,189,248,0.18),transparent_24%),radial-gradient(circle_at_70%_80%,rgba(244,114,182,0.12),transparent_22%),linear-gradient(135deg,#05110e_0%,#0a1621_45%,#050608_100%)] px-6 py-8 shadow-[0_0_80px_rgba(16,185,129,0.09)] sm:px-8 sm:py-10 lg:px-12 lg:py-14">
+        <div className="absolute left-[-8%] top-[-10%] h-60 w-60 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="absolute right-[-10%] top-[6%] h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
+        <div className="absolute bottom-[-14%] left-[30%] h-60 w-60 rounded-full bg-fuchsia-400/10 blur-3xl" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.3)_55%,rgba(0,0,0,0.66)_100%)]" />
+        <div className="relative grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
           <div className="max-w-3xl space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.28em] text-amber-200">
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.28em] text-emerald-200"
+            >
               <Home className="h-4 w-4" />
               {ui.homeHeroEyebrow}
-            </div>
-            <div className="space-y-4">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.52, delay: 0.08 }}
+              className="space-y-4"
+            >
               <h1 className="max-w-4xl text-4xl font-black leading-[0.95] text-white sm:text-5xl lg:text-7xl">
                 {ui.homeHeroTitle}
               </h1>
               <p className="max-w-2xl text-sm leading-7 text-white/72 sm:text-base lg:text-lg">
                 {ui.homeHeroBody}
               </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.16 }}
+              className="flex flex-col gap-3 sm:flex-row"
+            >
               <button
                 onClick={onOpenDashboard}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.01]"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-6 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.01]"
               >
                 {ui.homeHeroPrimary}
                 <ArrowRight className="h-4 w-4" />
@@ -1381,31 +1397,78 @@ function LandingPage({
                 <Mail className="h-4 w-4" />
                 {ui.homeHeroSecondary}
               </a>
-            </div>
-          </div>
-
-          <div className="relative min-h-[420px] rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-4 shadow-2xl">
-            <div className="absolute inset-x-6 top-5 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.28em] text-white/35">
-              <span>{ui.homeStatsTitle}</span>
-              <span>Convoy</span>
-            </div>
-            <div className="absolute inset-x-4 bottom-5 h-24 rounded-[24px] border border-white/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.22))]" />
-            <div className="absolute inset-x-8 bottom-14 h-1 rounded-full bg-white/10" />
-            <div className="absolute inset-x-8 bottom-10 h-1 rounded-full bg-white/10" />
-
-            <div className="relative flex h-full flex-col justify-end gap-4 pt-16">
-              {convoy.map((item, index) => (
-                <div key={item.title}>
-                  <MinerCartCard
-                    title={item.title}
-                    body={item.body}
-                    tone={item.tone}
-                    delay={item.delay}
-                    align={index % 2 === 0 ? 'left' : 'right'}
-                  />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.58, delay: 0.24 }}
+              className="grid gap-3 sm:grid-cols-3"
+            >
+              {ui.homeStats.map((item: { label: string; value: string; note: string }) => (
+                <div key={item.label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-white/38">{item.label}</p>
+                  <p className="mt-3 text-3xl font-black text-white">{item.value}</p>
+                  <p className="mt-2 text-sm leading-6 text-white/52">{item.note}</p>
                 </div>
               ))}
-            </div>
+            </motion.div>
+          </div>
+
+          <div className="relative min-h-[520px]">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.12 }}
+              className="absolute inset-x-[8%] top-[4%] rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-md"
+            >
+              <div className="mb-8 flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/38">{ui.homeStatsTitle}</p>
+                  <p className="mt-2 text-2xl font-black text-white">Yang-RotBot Trading</p>
+                </div>
+                <div className="rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-300">
+                  Live System
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {floatingCards.map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">{item.label}</p>
+                    <p className="mt-3 text-xl font-black text-white sm:text-2xl">{item.value}</p>
+                    <p className="mt-2 text-sm leading-6 text-white/55">{item.body}</p>
+                  </div>
+                ))}
+                <div className="rounded-2xl border border-emerald-400/12 bg-emerald-400/8 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-200/70">{ui.footerVisits}</p>
+                  <p className="mt-3 font-mono text-3xl font-black text-emerald-300">
+                    {visitCount === null ? '--' : visitCount.toLocaleString(locale)}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-white/55">
+                    {lang === 'zh' ? '品牌首頁先展示產品定位，再導向主儀表板。' : 'The landing page frames the product before the main dashboard opens.'}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {floatingCards.map((item, index) => (
+              <div key={item.label}>
+                <FloatingSignalCard
+                  title={item.label}
+                  value={item.value}
+                  body={item.body}
+                  tone={item.tone}
+                  delay={item.delay}
+                  className={
+                    index === 0
+                      ? 'left-0 top-[8%] w-[52%]'
+                      : index === 1
+                        ? 'right-[2%] top-[38%] w-[46%]'
+                        : 'left-[8%] bottom-[2%] w-[50%]'
+                  }
+                />
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1426,7 +1489,7 @@ function LandingPage({
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               onClick={onOpenDashboard}
-              className="rounded-full border border-amber-400/25 bg-amber-400/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.22em] text-amber-200 transition-colors hover:bg-amber-400/15"
+              className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.22em] text-emerald-200 transition-colors hover:bg-emerald-400/15"
             >
               {ui.footerDashboard}
             </button>
@@ -1473,77 +1536,72 @@ function LandingInfoCard({ icon, title, body }: { icon: React.ReactNode; title: 
   );
 }
 
-function MinerCartCard({
+function FloatingSignalCard({
   title,
+  value,
   body,
   tone,
   delay,
-  align,
+  className,
 }: {
   title: string;
+  value: string;
   body: string;
   tone: 'emerald' | 'amber' | 'sky';
   delay: number;
-  align: 'left' | 'right';
+  className: string;
 }) {
   const palette =
     tone === 'amber'
       ? {
-          glow: 'rgba(251,191,36,0.18)',
+          glow: 'rgba(251,191,36,0.16)',
           border: 'border-amber-300/15',
-          accent: 'bg-amber-300',
           soft: 'bg-amber-300/10 text-amber-100',
+          line: 'from-amber-300/30 to-transparent',
         }
       : tone === 'sky'
         ? {
-            glow: 'rgba(56,189,248,0.18)',
+            glow: 'rgba(56,189,248,0.16)',
             border: 'border-sky-300/15',
-            accent: 'bg-sky-300',
             soft: 'bg-sky-300/10 text-sky-100',
+            line: 'from-sky-300/30 to-transparent',
           }
         : {
-            glow: 'rgba(52,211,153,0.18)',
+            glow: 'rgba(52,211,153,0.16)',
             border: 'border-emerald-300/15',
-            accent: 'bg-emerald-300',
             soft: 'bg-emerald-300/10 text-emerald-100',
+            line: 'from-emerald-300/30 to-transparent',
           };
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: align === 'left' ? -30 : 30, y: 12 }}
-      animate={{ opacity: 1, x: 0, y: [0, -8, 0] }}
+      initial={{ opacity: 0, y: 24, scale: 0.96 }}
+      animate={{ opacity: 1, y: [0, -10, 0], scale: 1 }}
       transition={{
         opacity: { duration: 0.45, delay },
-        x: { duration: 0.45, delay },
-        y: { duration: 3.8, delay, repeat: Infinity, ease: 'easeInOut' },
+        scale: { duration: 0.45, delay },
+        y: { duration: 4.4, delay, repeat: Infinity, ease: 'easeInOut' },
       }}
-      className={cn('relative', align === 'right' ? 'self-end' : 'self-start')}
+      className={cn('absolute hidden xl:block', className)}
     >
       <div
         className={cn(
-          'relative w-[min(100%,360px)] rounded-[26px] border bg-[#15110d]/90 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.32)] backdrop-blur-sm',
+          'relative rounded-[26px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_14px_40px_rgba(0,0,0,0.32)] backdrop-blur-md',
           palette.border,
         )}
         style={{ boxShadow: `0 14px 40px ${palette.glow}` }}
       >
-        <div className="flex items-center gap-3">
-          <div className="relative flex h-14 w-24 items-end justify-center">
-            <div className="absolute bottom-0 h-8 w-20 rounded-[10px] border border-white/10 bg-[linear-gradient(180deg,#8a6541_0%,#5d4127_100%)]" />
-            <div className="absolute bottom-1 left-2 h-6 w-6 rounded-full border border-[#4f3421] bg-[#2f2015]" />
-            <div className="absolute bottom-1 right-2 h-6 w-6 rounded-full border border-[#4f3421] bg-[#2f2015]" />
-            <div className="absolute bottom-7 left-6 h-5 w-5 rounded-full bg-[#ffcfb2]" />
-            <div className="absolute bottom-[26px] right-6 h-5 w-5 rounded-full bg-[#ffcfb2]" />
-            <div className={cn('absolute bottom-[30px] left-5 h-2.5 w-6 rounded-full', palette.accent)} />
-            <div className={cn('absolute bottom-[30px] right-5 h-2.5 w-6 rounded-full', palette.accent)} />
-            <div className="absolute bottom-[25px] left-[18px] h-5 w-7 rounded-b-full rounded-t-[14px] bg-[#f4f0ea]" />
-            <div className="absolute bottom-[25px] right-[18px] h-5 w-7 rounded-b-full rounded-t-[14px] bg-[#f4f0ea]" />
-          </div>
-
-          <div className="min-w-0 flex-1">
+        <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
             <div className={cn('inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.24em]', palette.soft)}>
               {title}
             </div>
-            <p className="mt-2 text-sm leading-6 text-white/70">{body}</p>
+            <p className="mt-3 text-2xl font-black text-white">{value}</p>
+            <p className="mt-2 text-sm leading-6 text-white/62">{body}</p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/20">
+            <div className={cn('h-6 w-6 rounded-full bg-gradient-to-br', palette.line)} />
           </div>
         </div>
       </div>
