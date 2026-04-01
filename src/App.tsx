@@ -20,6 +20,11 @@ import {
   BrainCircuit,
   LayoutDashboard,
   X,
+  Home,
+  Mail,
+  ArrowRight,
+  ShieldCheck,
+  Globe2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -487,13 +492,15 @@ function AppContent() {
     ? 'learning-agent'
     : location.pathname === '/self-learning-lab'
       ? 'self-learning-lab'
+    : location.pathname === '/dashboard'
+      ? 'dashboard'
     : location.pathname === '/about'
       ? 'about'
       : location.pathname === '/privacy'
         ? 'privacy'
     : location.pathname === '/learning'
       ? 'learning'
-      : 'dashboard';
+      : 'home';
 
   const selectedAgent = selectedAgentId !== null ? agents.find(a => a.id === selectedAgentId) : null;
   const selectedLearningAgent = learningAgentId !== null ? agents.find((agent) => agent.id === learningAgentId) ?? null : null;
@@ -517,6 +524,7 @@ function AppContent() {
 
   const ui = lang === 'zh'
     ? {
+        navHome: '首頁',
         navDashboard: '儀表板',
         navLearning: '學習頁',
         navSelfLearningLab: 'AI 自學實驗室',
@@ -527,10 +535,31 @@ function AppContent() {
         marketStatusLabel: '市場狀態',
         marketStatusValue: '多資產',
         footerAbout: '關於',
+        footerContact: '聯絡我們',
         footerPrivacy: '隱私',
         footerDashboard: '儀表板',
         footerVisits: '訪問次數',
         footerCopyright: '© 2026 Yang-RotBot Trading 模擬交易環境',
+        contactHref: 'mailto:contact@yangzilla.dpdns.org',
+        homeHeroEyebrow: '模擬交易品牌首頁',
+        homeHeroTitle: '建立可解釋、可觀察、可持續進化的 AI 交易實驗室',
+        homeHeroBody: 'Yang-RotBot Trading 專注於多代理交易模擬、風險控制、學習模型整合與策略可視化，讓你先看懂系統，再進入主儀表板觀察實際運作。',
+        homeHeroPrimary: '進入主儀表板',
+        homeHeroSecondary: '聯絡我們',
+        homeStatsTitle: '我們正在做什麼',
+        homeStats: [
+          { label: '模擬代理', value: '100', note: '主儀表板獨立運作' },
+          { label: '自學沙盒', value: 'AI#101', note: '與主資料完全分離' },
+          { label: '風險來源', value: 'Polyglobe', note: '整合外部地緣風險' },
+        ],
+        homeSectionAbout: '關於我們',
+        homeSectionAboutBody: '我們把交易系統拆成可理解的模組，從進場、平倉、持倉、樣本學習到外部風險濾網，讓每一個判斷都能被看見、被檢查、被優化。',
+        homeSectionProject: '我們的專案',
+        homeSectionProjectBody: '主儀表板負責展示 100 個 AI 的模擬行情反應，學習頁整合高排名模型，自學實驗室則讓 AI#101 在獨立沙盒中驗證新策略，不回寫主數據。',
+        homeSectionContact: '聯絡我們',
+        homeSectionContactBody: '如果你想合作、客製首頁文案、接入更多市場來源，或調整廣告與品牌頁資訊，可以直接透過 Email 聯絡站點維護者。',
+        homeSectionTrust: '使用說明',
+        homeSectionTrustBody: '首頁用來介紹產品與聯絡資訊；主儀表板顯示的是模擬交易資料，不是投資建議，也不會直接替你執行真實下單。',
         aboutTitle: '關於 Yang-RotBot Trading',
         aboutDescription: 'Yang-RotBot Trading 是一個以瀏覽器為基礎的交易模擬儀表板，用來展示多代理策略行為、介面設計，以及教育用途的市場分析。',
         aboutSections: [
@@ -565,6 +594,7 @@ function AppContent() {
         ],
       }
     : {
+        navHome: 'Home',
         navDashboard: 'Dashboard',
         navLearning: 'Learning',
         navSelfLearningLab: 'AI Lab',
@@ -575,10 +605,31 @@ function AppContent() {
         marketStatusLabel: 'Market Status',
         marketStatusValue: 'Multi-Asset',
         footerAbout: 'About',
+        footerContact: 'Contact',
         footerPrivacy: 'Privacy',
         footerDashboard: 'Dashboard',
         footerVisits: 'Visits',
         footerCopyright: '© 2026 Yang-RotBot Trading Simulation Trading Environment',
+        contactHref: 'mailto:contact@yangzilla.dpdns.org',
+        homeHeroEyebrow: 'AI Trading Brand Home',
+        homeHeroTitle: 'Build an explainable, observable, and continuously improving AI trading lab',
+        homeHeroBody: 'Yang-RotBot Trading focuses on multi-agent trading simulation, risk control, model learning, and strategy visualization so visitors can understand the system before entering the main dashboard.',
+        homeHeroPrimary: 'Open Dashboard',
+        homeHeroSecondary: 'Contact Us',
+        homeStatsTitle: 'What We Run',
+        homeStats: [
+          { label: 'Sim Agents', value: '100', note: 'Main dashboard state' },
+          { label: 'Sandbox AI', value: 'AI#101', note: 'Fully isolated lab' },
+          { label: 'Risk Feed', value: 'Polyglobe', note: 'External geopolitical filter' },
+        ],
+        homeSectionAbout: 'About Us',
+        homeSectionAboutBody: 'We break trading systems into understandable modules so entries, exits, positions, sample learning, and external risk filters can all be inspected and improved.',
+        homeSectionProject: 'Our Project',
+        homeSectionProjectBody: 'The main dashboard shows how 100 agents react to simulated markets, the learning page blends top-ranked models, and the self-learning lab lets AI#101 validate new strategy behavior without writing back to main data.',
+        homeSectionContact: 'Contact Us',
+        homeSectionContactBody: 'If you want to collaborate, customize the landing page, connect more market sources, or update brand and advertising information, contact the site owner by email.',
+        homeSectionTrust: 'How To Use',
+        homeSectionTrustBody: 'This landing page introduces the product and contact details first. The main dashboard contains simulated trading data only and does not execute real orders.',
         aboutTitle: 'About Yang-RotBot Trading',
         aboutDescription: 'Yang-RotBot Trading is a browser-based trading simulation dashboard built to demonstrate multi-agent strategy behavior, interface design, and educational market analysis.',
         aboutSections: [
@@ -721,9 +772,21 @@ function AppContent() {
           </div>
 
           <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:flex-nowrap md:gap-6">
-            <div className="order-first grid w-full grid-cols-3 gap-1 rounded-full border border-white/10 bg-white/5 p-1 md:order-none md:flex md:w-auto md:items-center md:gap-2">
+            <div className="order-first grid w-full grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-white/5 p-1 sm:grid-cols-4 md:order-none md:flex md:w-auto md:items-center md:gap-2 md:rounded-full">
               <button
                 onClick={() => navigate('/')}
+                className={cn(
+                  'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3 md:text-[12px]',
+                  currentPage === 'home'
+                    ? 'bg-sky-500/10 text-sky-300'
+                    : 'text-white/50 hover:text-white'
+                )}
+              >
+                <Home className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+                <span className="truncate">{ui.navHome}</span>
+              </button>
+              <button
+                onClick={() => navigate('/dashboard')}
                 className={cn(
                   'inline-flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[9px] font-bold uppercase tracking-wide transition-colors sm:text-[10px] sm:tracking-widest md:px-3 md:text-[12px]',
                   currentPage === 'dashboard'
@@ -846,7 +909,15 @@ function AppContent() {
         </div>
       </header>
 
-      {currentPage === 'learning' ? (
+      {currentPage === 'home' ? (
+        <LandingPage
+          lang={lang}
+          ui={ui}
+          visitCount={visitCount}
+          locale={locale}
+          onOpenDashboard={() => navigate('/dashboard')}
+        />
+      ) : currentPage === 'learning' ? (
         <Learning agents={agents} onOpenAgent={(agentId) => navigate(`/learning/agent/${agentId}`)} lang={lang} />
       ) : currentPage === 'learning-agent' ? (
         <LearningAgentDetail agent={selectedLearningAgent} onBack={() => navigate('/learning')} lang={lang} />
@@ -1196,7 +1267,8 @@ function AppContent() {
         <div className="flex gap-6">
           <button onClick={() => navigate('/about')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerAbout}</button>
           <button onClick={() => navigate('/privacy')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerPrivacy}</button>
-          <button onClick={() => navigate('/')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerDashboard}</button>
+          <a href={ui.contactHref} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerContact}</a>
+          <button onClick={() => navigate('/dashboard')} className="text-[10px] text-white/20 hover:text-white transition-colors uppercase tracking-widest font-bold">{ui.footerDashboard}</button>
         </div>
       </footer>
     </div>
@@ -1246,6 +1318,130 @@ function QuickDetailStat({
         {value}
       </p>
     </div>
+  );
+}
+
+function LandingPage({
+  lang,
+  ui,
+  visitCount,
+  locale,
+  onOpenDashboard,
+}: {
+  lang: Language;
+  ui: any;
+  visitCount: number | null;
+  locale: string;
+  onOpenDashboard: () => void;
+}) {
+  return (
+    <main className="mx-auto max-w-[1600px] space-y-8 p-4 sm:p-6">
+      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.18),transparent_24%),linear-gradient(135deg,#04110d_0%,#09151f_45%,#050505_100%)] px-6 py-8 shadow-[0_0_60px_rgba(16,185,129,0.08)] sm:px-8 sm:py-10 lg:px-12 lg:py-14">
+        <div className="absolute inset-y-0 right-[-8%] hidden w-[42%] rounded-full bg-emerald-400/10 blur-3xl lg:block" />
+        <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+          <div className="max-w-3xl space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.28em] text-emerald-300">
+              <Globe2 className="h-4 w-4" />
+              {ui.homeHeroEyebrow}
+            </div>
+            <div className="space-y-4">
+              <h1 className="max-w-4xl text-4xl font-black leading-[0.95] text-white sm:text-5xl lg:text-7xl">
+                {ui.homeHeroTitle}
+              </h1>
+              <p className="max-w-2xl text-sm leading-7 text-white/72 sm:text-base lg:text-lg">
+                {ui.homeHeroBody}
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={onOpenDashboard}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-6 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.01]"
+              >
+                {ui.homeHeroPrimary}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <a
+                href={ui.contactHref}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold uppercase tracking-[0.2em] text-white/80 transition-colors hover:border-white/20 hover:text-white"
+              >
+                <Mail className="h-4 w-4" />
+                {ui.homeHeroSecondary}
+              </a>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+            {ui.homeStats.map((item: { label: string; value: string; note: string }) => (
+              <div key={item.label} className="rounded-3xl border border-white/10 bg-black/30 p-5 backdrop-blur-sm">
+                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/40">{item.label}</p>
+                <p className="mt-3 text-3xl font-black text-white sm:text-4xl">{item.value}</p>
+                <p className="mt-2 text-sm leading-6 text-white/55">{item.note}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr]">
+        <LandingInfoCard icon={<BrainCircuit className="h-5 w-5" />} title={ui.homeSectionAbout} body={ui.homeSectionAboutBody} />
+        <LandingInfoCard icon={<LayoutDashboard className="h-5 w-5" />} title={ui.homeSectionProject} body={ui.homeSectionProjectBody} />
+        <LandingInfoCard icon={<Mail className="h-5 w-5" />} title={ui.homeSectionContact} body={ui.homeSectionContactBody} />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-[28px] border border-white/10 bg-[#111] p-6 shadow-2xl sm:p-8">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-emerald-300">
+            <ShieldCheck className="h-4 w-4" />
+            {ui.homeSectionTrust}
+          </div>
+          <p className="text-sm leading-7 text-white/72 sm:text-base">{ui.homeSectionTrustBody}</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              onClick={onOpenDashboard}
+              className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.22em] text-emerald-300 transition-colors hover:bg-emerald-500/15"
+            >
+              {ui.footerDashboard}
+            </button>
+            <button
+              onClick={() => window.location.assign('/about')}
+              className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.22em] text-white/72 transition-colors hover:text-white"
+            >
+              {ui.footerAbout}
+            </button>
+            <button
+              onClick={() => window.location.assign('/privacy')}
+              className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.22em] text-white/72 transition-colors hover:text-white"
+            >
+              {ui.footerPrivacy}
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,#121212_0%,#0a0a0a_100%)] p-6 shadow-2xl sm:p-8">
+          <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/40">{ui.footerVisits}</p>
+          <p className="mt-3 font-mono text-5xl font-black text-emerald-400">
+            {visitCount === null ? '--' : visitCount.toLocaleString(locale)}
+          </p>
+          <p className="mt-3 text-sm leading-7 text-white/55">
+            {lang === 'zh'
+              ? '這個首頁會先介紹品牌資訊、聯絡方式與產品定位，接著再帶你進入主儀表板。'
+              : 'This home page introduces the brand, contact details, and product context before taking visitors into the main dashboard.'}
+          </p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function LandingInfoCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <section className="rounded-[28px] border border-white/10 bg-[#111] p-6 shadow-2xl sm:p-7">
+      <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-emerald-300">
+        {icon}
+      </div>
+      <h2 className="text-lg font-bold text-white">{title}</h2>
+      <p className="mt-3 text-sm leading-7 text-white/65">{body}</p>
+    </section>
   );
 }
 
