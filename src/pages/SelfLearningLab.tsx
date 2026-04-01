@@ -825,7 +825,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           <SmallStat label={t.riskScore} value={externalRisk.riskScore} />
           <SmallStat
             label={t.entryGate}
-            value={externalRisk.blockNewEntries ? t.riskBlocked : externalRisk.preferShortEntries ? t.riskShortBias : t.riskClear}
+            value={externalRisk.forceExit || externalRisk.blockNewEntries ? t.riskBlocked : externalRisk.preferShortEntries ? t.riskShortBias : t.riskClear}
           />
           <SmallStat label={t.blackSwanExit} value={marketCrashActive ? t.blackSwanDetected : t.blackSwanSafe} />
           <SmallStat label="Source" value="Polyglobe" />

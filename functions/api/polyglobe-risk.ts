@@ -88,8 +88,12 @@ export const onRequestGet = async () => {
     const preferShortEntries =
       riskScore >= 45 &&
       (topConflictProbability >= 0.15 || averageTopConflictProbability >= 0.1 || severeTweetHits >= 4);
-    const blockNewEntries = riskScore >= 82;
-    const forceExit = riskScore >= 92;
+    const blockNewEntries = !preferShortEntries && riskScore >= 90;
+    const forceExit =
+      riskScore >= 98 &&
+      topConflictProbability >= 0.35 &&
+      averageTopConflictProbability >= 0.2 &&
+      severeTweetHits >= 8;
 
     return Response.json(
       {
