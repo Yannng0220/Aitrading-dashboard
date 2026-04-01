@@ -1414,13 +1414,15 @@ function LandingPage({
             </motion.div>
           </div>
 
-          <div className="relative min-h-[520px]">
+          <div className="relative">
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 18 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.55, delay: 0.12 }}
-              className="absolute inset-x-[8%] top-[4%] rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-md"
+              className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-md"
             >
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+              <div className="absolute right-8 top-8 h-24 w-24 rounded-full bg-emerald-400/10 blur-2xl" />
               <div className="mb-8 flex items-center justify-between">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/38">{ui.homeStatsTitle}</p>
@@ -1431,44 +1433,59 @@ function LandingPage({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {floatingCards.map((item) => (
                   <div key={item.label} className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">{item.label}</p>
-                    <p className="mt-3 text-xl font-black text-white sm:text-2xl">{item.value}</p>
+                    <div className="mb-4 flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">{item.label}</p>
+                      <div className={cn(
+                        'h-2.5 w-2.5 rounded-full',
+                        item.tone === 'emerald' ? 'bg-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.8)]' :
+                        item.tone === 'sky' ? 'bg-sky-300 shadow-[0_0_18px_rgba(56,189,248,0.8)]' :
+                        'bg-amber-300 shadow-[0_0_18px_rgba(251,191,36,0.8)]'
+                      )} />
+                    </div>
+                    <p className="text-2xl font-black text-white">{item.value}</p>
                     <p className="mt-2 text-sm leading-6 text-white/55">{item.body}</p>
                   </div>
                 ))}
-                <div className="rounded-2xl border border-emerald-400/12 bg-emerald-400/8 p-4">
+              </div>
+
+              <div className="mt-4 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-2xl border border-cyan-400/10 bg-[linear-gradient(180deg,rgba(8,22,32,0.9),rgba(6,10,14,0.88))] p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-100/45">System Overview</p>
+                    <div className="rounded-full border border-cyan-400/15 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200">
+                      Dashboard Ready
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                      <span className="text-sm text-white/55">{lang === 'zh' ? '主儀表板資料' : 'Main dashboard data'}</span>
+                      <span className="font-mono text-sm text-white">Isolated</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                      <span className="text-sm text-white/55">{lang === 'zh' ? '模型學習流程' : 'Model learning flow'}</span>
+                      <span className="font-mono text-sm text-white">Top Rank -&gt; AI#101</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                      <span className="text-sm text-white/55">{lang === 'zh' ? '風險控管層' : 'Risk control layer'}</span>
+                      <span className="font-mono text-sm text-white">External + Market</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-400/12 bg-emerald-400/8 p-5">
                   <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-200/70">{ui.footerVisits}</p>
-                  <p className="mt-3 font-mono text-3xl font-black text-emerald-300">
+                  <p className="mt-3 font-mono text-4xl font-black text-emerald-300">
                     {visitCount === null ? '--' : visitCount.toLocaleString(locale)}
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-white/55">
+                  <p className="mt-3 text-sm leading-6 text-white/55">
                     {lang === 'zh' ? '品牌首頁先展示產品定位，再導向主儀表板。' : 'The landing page frames the product before the main dashboard opens.'}
                   </p>
                 </div>
               </div>
             </motion.div>
-
-            {floatingCards.map((item, index) => (
-              <div key={item.label}>
-                <FloatingSignalCard
-                  title={item.label}
-                  value={item.value}
-                  body={item.body}
-                  tone={item.tone}
-                  delay={item.delay}
-                  className={
-                    index === 0
-                      ? 'left-0 top-[8%] w-[52%]'
-                      : index === 1
-                        ? 'right-[2%] top-[38%] w-[46%]'
-                        : 'left-[8%] bottom-[2%] w-[50%]'
-                  }
-                />
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -1533,79 +1550,6 @@ function LandingInfoCard({ icon, title, body }: { icon: React.ReactNode; title: 
       <h2 className="text-lg font-bold text-white">{title}</h2>
       <p className="mt-3 text-sm leading-7 text-white/65">{body}</p>
     </section>
-  );
-}
-
-function FloatingSignalCard({
-  title,
-  value,
-  body,
-  tone,
-  delay,
-  className,
-}: {
-  title: string;
-  value: string;
-  body: string;
-  tone: 'emerald' | 'amber' | 'sky';
-  delay: number;
-  className: string;
-}) {
-  const palette =
-    tone === 'amber'
-      ? {
-          glow: 'rgba(251,191,36,0.16)',
-          border: 'border-amber-300/15',
-          soft: 'bg-amber-300/10 text-amber-100',
-          line: 'from-amber-300/30 to-transparent',
-        }
-      : tone === 'sky'
-        ? {
-            glow: 'rgba(56,189,248,0.16)',
-            border: 'border-sky-300/15',
-            soft: 'bg-sky-300/10 text-sky-100',
-            line: 'from-sky-300/30 to-transparent',
-          }
-        : {
-            glow: 'rgba(52,211,153,0.16)',
-            border: 'border-emerald-300/15',
-            soft: 'bg-emerald-300/10 text-emerald-100',
-            line: 'from-emerald-300/30 to-transparent',
-          };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.96 }}
-      animate={{ opacity: 1, y: [0, -10, 0], scale: 1 }}
-      transition={{
-        opacity: { duration: 0.45, delay },
-        scale: { duration: 0.45, delay },
-        y: { duration: 4.4, delay, repeat: Infinity, ease: 'easeInOut' },
-      }}
-      className={cn('absolute hidden xl:block', className)}
-    >
-      <div
-        className={cn(
-          'relative rounded-[26px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_14px_40px_rgba(0,0,0,0.32)] backdrop-blur-md',
-          palette.border,
-        )}
-        style={{ boxShadow: `0 14px 40px ${palette.glow}` }}
-      >
-        <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className={cn('inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.24em]', palette.soft)}>
-              {title}
-            </div>
-            <p className="mt-3 text-2xl font-black text-white">{value}</p>
-            <p className="mt-2 text-sm leading-6 text-white/62">{body}</p>
-          </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/20">
-            <div className={cn('h-6 w-6 rounded-full bg-gradient-to-br', palette.line)} />
-          </div>
-        </div>
-      </div>
-    </motion.div>
   );
 }
 
