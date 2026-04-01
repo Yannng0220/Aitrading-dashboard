@@ -1334,14 +1334,28 @@ function LandingPage({
   locale: string;
   onOpenDashboard: () => void;
 }) {
+  const convoy = lang === 'zh'
+    ? [
+        { title: '訊號礦車', body: '從市場波動中挖出可解釋訊號', tone: 'emerald' as const, delay: 0 },
+        { title: '學習礦車', body: '把高排名樣本帶回 AI#101 沙盒', tone: 'amber' as const, delay: 0.15 },
+        { title: '風控礦車', body: '先檢查外部風險，再決定進場方向', tone: 'sky' as const, delay: 0.3 },
+      ]
+    : [
+        { title: 'Signal Cart', body: 'Mine interpretable market signals from price motion', tone: 'emerald' as const, delay: 0 },
+        { title: 'Learning Cart', body: 'Bring top-ranked samples back into the AI#101 sandbox', tone: 'amber' as const, delay: 0.15 },
+        { title: 'Risk Cart', body: 'Check external risk before choosing the trade direction', tone: 'sky' as const, delay: 0.3 },
+      ];
+
   return (
     <main className="mx-auto max-w-[1600px] space-y-8 p-4 sm:p-6">
-      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.18),transparent_24%),linear-gradient(135deg,#04110d_0%,#09151f_45%,#050505_100%)] px-6 py-8 shadow-[0_0_60px_rgba(16,185,129,0.08)] sm:px-8 sm:py-10 lg:px-12 lg:py-14">
-        <div className="absolute inset-y-0 right-[-8%] hidden w-[42%] rounded-full bg-emerald-400/10 blur-3xl lg:block" />
-        <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.16),transparent_22%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.14),transparent_22%),linear-gradient(135deg,#19110a_0%,#0f1618_40%,#060606_100%)] px-6 py-8 shadow-[0_0_60px_rgba(245,158,11,0.1)] sm:px-8 sm:py-10 lg:px-12 lg:py-14">
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.34)_50%,rgba(0,0,0,0.72)_100%)]" />
+        <div className="absolute left-[-10%] top-[-12%] h-56 w-56 rounded-full bg-amber-400/10 blur-3xl" />
+        <div className="absolute right-[-8%] top-[10%] h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
+        <div className="relative grid gap-8 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
           <div className="max-w-3xl space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.28em] text-emerald-300">
-              <Globe2 className="h-4 w-4" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.28em] text-amber-200">
+              <Home className="h-4 w-4" />
               {ui.homeHeroEyebrow}
             </div>
             <div className="space-y-4">
@@ -1355,7 +1369,7 @@ function LandingPage({
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={onOpenDashboard}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-6 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.01]"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.01]"
               >
                 {ui.homeHeroPrimary}
                 <ArrowRight className="h-4 w-4" />
@@ -1370,14 +1384,28 @@ function LandingPage({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-            {ui.homeStats.map((item: { label: string; value: string; note: string }) => (
-              <div key={item.label} className="rounded-3xl border border-white/10 bg-black/30 p-5 backdrop-blur-sm">
-                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/40">{item.label}</p>
-                <p className="mt-3 text-3xl font-black text-white sm:text-4xl">{item.value}</p>
-                <p className="mt-2 text-sm leading-6 text-white/55">{item.note}</p>
-              </div>
-            ))}
+          <div className="relative min-h-[420px] rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-4 shadow-2xl">
+            <div className="absolute inset-x-6 top-5 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.28em] text-white/35">
+              <span>{ui.homeStatsTitle}</span>
+              <span>Convoy</span>
+            </div>
+            <div className="absolute inset-x-4 bottom-5 h-24 rounded-[24px] border border-white/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.22))]" />
+            <div className="absolute inset-x-8 bottom-14 h-1 rounded-full bg-white/10" />
+            <div className="absolute inset-x-8 bottom-10 h-1 rounded-full bg-white/10" />
+
+            <div className="relative flex h-full flex-col justify-end gap-4 pt-16">
+              {convoy.map((item, index) => (
+                <div key={item.title}>
+                  <MinerCartCard
+                    title={item.title}
+                    body={item.body}
+                    tone={item.tone}
+                    delay={item.delay}
+                    align={index % 2 === 0 ? 'left' : 'right'}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -1398,7 +1426,7 @@ function LandingPage({
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               onClick={onOpenDashboard}
-              className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.22em] text-emerald-300 transition-colors hover:bg-emerald-500/15"
+              className="rounded-full border border-amber-400/25 bg-amber-400/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.22em] text-amber-200 transition-colors hover:bg-amber-400/15"
             >
               {ui.footerDashboard}
             </button>
@@ -1435,13 +1463,91 @@ function LandingPage({
 
 function LandingInfoCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
-    <section className="rounded-[28px] border border-white/10 bg-[#111] p-6 shadow-2xl sm:p-7">
-      <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-emerald-300">
+    <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,#151515_0%,#0f0f0f_100%)] p-6 shadow-2xl sm:p-7">
+      <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/10 text-amber-200">
         {icon}
       </div>
       <h2 className="text-lg font-bold text-white">{title}</h2>
       <p className="mt-3 text-sm leading-7 text-white/65">{body}</p>
     </section>
+  );
+}
+
+function MinerCartCard({
+  title,
+  body,
+  tone,
+  delay,
+  align,
+}: {
+  title: string;
+  body: string;
+  tone: 'emerald' | 'amber' | 'sky';
+  delay: number;
+  align: 'left' | 'right';
+}) {
+  const palette =
+    tone === 'amber'
+      ? {
+          glow: 'rgba(251,191,36,0.18)',
+          border: 'border-amber-300/15',
+          accent: 'bg-amber-300',
+          soft: 'bg-amber-300/10 text-amber-100',
+        }
+      : tone === 'sky'
+        ? {
+            glow: 'rgba(56,189,248,0.18)',
+            border: 'border-sky-300/15',
+            accent: 'bg-sky-300',
+            soft: 'bg-sky-300/10 text-sky-100',
+          }
+        : {
+            glow: 'rgba(52,211,153,0.18)',
+            border: 'border-emerald-300/15',
+            accent: 'bg-emerald-300',
+            soft: 'bg-emerald-300/10 text-emerald-100',
+          };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: align === 'left' ? -30 : 30, y: 12 }}
+      animate={{ opacity: 1, x: 0, y: [0, -8, 0] }}
+      transition={{
+        opacity: { duration: 0.45, delay },
+        x: { duration: 0.45, delay },
+        y: { duration: 3.8, delay, repeat: Infinity, ease: 'easeInOut' },
+      }}
+      className={cn('relative', align === 'right' ? 'self-end' : 'self-start')}
+    >
+      <div
+        className={cn(
+          'relative w-[min(100%,360px)] rounded-[26px] border bg-[#15110d]/90 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.32)] backdrop-blur-sm',
+          palette.border,
+        )}
+        style={{ boxShadow: `0 14px 40px ${palette.glow}` }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-14 w-24 items-end justify-center">
+            <div className="absolute bottom-0 h-8 w-20 rounded-[10px] border border-white/10 bg-[linear-gradient(180deg,#8a6541_0%,#5d4127_100%)]" />
+            <div className="absolute bottom-1 left-2 h-6 w-6 rounded-full border border-[#4f3421] bg-[#2f2015]" />
+            <div className="absolute bottom-1 right-2 h-6 w-6 rounded-full border border-[#4f3421] bg-[#2f2015]" />
+            <div className="absolute bottom-7 left-6 h-5 w-5 rounded-full bg-[#ffcfb2]" />
+            <div className="absolute bottom-[26px] right-6 h-5 w-5 rounded-full bg-[#ffcfb2]" />
+            <div className={cn('absolute bottom-[30px] left-5 h-2.5 w-6 rounded-full', palette.accent)} />
+            <div className={cn('absolute bottom-[30px] right-5 h-2.5 w-6 rounded-full', palette.accent)} />
+            <div className="absolute bottom-[25px] left-[18px] h-5 w-7 rounded-b-full rounded-t-[14px] bg-[#f4f0ea]" />
+            <div className="absolute bottom-[25px] right-[18px] h-5 w-7 rounded-b-full rounded-t-[14px] bg-[#f4f0ea]" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className={cn('inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.24em]', palette.soft)}>
+              {title}
+            </div>
+            <p className="mt-2 text-sm leading-6 text-white/70">{body}</p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
