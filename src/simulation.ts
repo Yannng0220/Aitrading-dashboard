@@ -3,6 +3,7 @@
 export type PriceMap = Record<string, number>;
 export type StrategyExecutionOptions = {
   entriesEnabled?: boolean;
+  preferredEntrySide?: 'LONG' | 'SHORT' | null;
 };
 
 const DEFAULT_SYMBOLS = ['BTCUSDT'];
@@ -626,6 +627,7 @@ function executeSmcStrategy(
   options: StrategyExecutionOptions = {},
 ): Partial<Agent> {
   const entriesEnabled = options.entriesEnabled ?? true;
+  const preferredEntrySide = options.preferredEntrySide ?? null;
   const params = getStrategyParams(agent);
   let balance = agent.balance;
   let trades = [...agent.trades];
@@ -738,6 +740,7 @@ function executeSmcStrategy(
     if (candidate.signals.confirmationScore < (params.confirmationThreshold ?? 4)) continue;
 
     const side = candidate.signals.direction as Position['side'];
+    if (preferredEntrySide && side !== preferredEntrySide) continue;
     const leverage = Math.min(
       getMaxLeverage(candidate.symbol),
       Math.max(params.leverageMin ?? 4, Math.round((params.leverageMin ?? 4) + candidate.signals.confirmationScore / 2)),
@@ -793,6 +796,7 @@ function executeGenericStrategy(
   options: StrategyExecutionOptions = {},
 ): Partial<Agent> {
   const entriesEnabled = options.entriesEnabled ?? true;
+  const preferredEntrySide = options.preferredEntrySide ?? null;
   if (agent.equity <= 0) {
     return {
       status: 'IDLE',
@@ -912,6 +916,7 @@ function executeGenericStrategy(
     }
 
     if (!shouldEnter) continue;
+    if (preferredEntrySide && side !== preferredEntrySide) continue;
 
     const leverage = Math.min(
       getMaxLeverage(symbol),

@@ -38,6 +38,7 @@ type SampleMemory = {
 type ExternalRiskSnapshot = {
   fetchedAt: string | null;
   riskScore: number;
+  preferShortEntries: boolean;
   blockNewEntries: boolean;
   forceExit: boolean;
   reasons: string[];
@@ -56,6 +57,7 @@ const EXTERNAL_RISK_REFRESH_MS = 30000;
 const defaultExternalRisk: ExternalRiskSnapshot = {
   fetchedAt: null,
   riskScore: 0,
+  preferShortEntries: false,
   blockNewEntries: false,
   forceExit: false,
   reasons: [],
@@ -83,6 +85,7 @@ const copy = {
     entryGate: '開單狀態',
     riskBlocked: '暫停新單',
     riskClear: '可正常開單',
+    riskShortBias: '戰爭風險偏空',
     blackSwanExit: '黑天鵝保護',
     blackSwanDetected: '已觸發急跌保護',
     blackSwanSafe: '未觸發急跌保護',
@@ -139,6 +142,7 @@ const copy = {
     entryGate: 'Entry Status',
     riskBlocked: 'New entries paused',
     riskClear: 'New entries allowed',
+    riskShortBias: 'Short bias active',
     blackSwanExit: 'Black Swan Guard',
     blackSwanDetected: 'Crash protection triggered',
     blackSwanSafe: 'Crash protection idle',
@@ -459,6 +463,7 @@ async function fetchExternalRiskSnapshot(): Promise<ExternalRiskSnapshot> {
     return {
       fetchedAt: typeof data?.fetchedAt === 'string' ? data.fetchedAt : null,
       riskScore: Number(data?.riskScore) || 0,
+      preferShortEntries: Boolean(data?.preferShortEntries),
       blockNewEntries: Boolean(data?.blockNewEntries),
       forceExit: Boolean(data?.forceExit),
       reasons: Array.isArray(data?.reasons) ? data.reasons : [],
@@ -625,6 +630,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           const liveRisk = externalRiskRef.current;
           const shouldBlockNewEntries = liveRisk.blockNewEntries || marketCrash.triggered;
           const shouldForceExit = liveRisk.forceExit || marketCrash.triggered;
+          const preferredEntrySide = liveRisk.preferShortEntries && !shouldForceExit ? 'SHORT' : null;
 
           const updatedAgent = shouldForceExit
             ? {
@@ -642,6 +648,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
                   ...agentWithLatestModel,
                   ...executeStrategy(agentWithLatestModel, allPrices, historyMapRef.current, {
                     entriesEnabled: !shouldBlockNewEntries,
+                    preferredEntrySide,
                   }),
                 }
               : {
@@ -816,7 +823,10 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
         <p className="mb-4 text-sm leading-relaxed text-white/70">{t.externalRiskBody}</p>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <SmallStat label={t.riskScore} value={externalRisk.riskScore} />
-          <SmallStat label={t.entryGate} value={externalRisk.blockNewEntries ? t.riskBlocked : t.riskClear} />
+          <SmallStat
+            label={t.entryGate}
+            value={externalRisk.blockNewEntries ? t.riskBlocked : externalRisk.preferShortEntries ? t.riskShortBias : t.riskClear}
+          />
           <SmallStat label={t.blackSwanExit} value={marketCrashActive ? t.blackSwanDetected : t.blackSwanSafe} />
           <SmallStat label="Source" value="Polyglobe" />
         </div>

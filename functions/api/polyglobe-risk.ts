@@ -85,8 +85,11 @@ export const onRequestGet = async () => {
     if (elevatedVolumeMarkets >= 2) reasons.push(`${elevatedVolumeMarkets} high-volume conflict markets`);
     if (reasons.length === 0) reasons.push("external geopolitical risk is currently muted");
 
-    const blockNewEntries = riskScore >= 45;
-    const forceExit = riskScore >= 70;
+    const preferShortEntries =
+      riskScore >= 45 &&
+      (topConflictProbability >= 0.15 || averageTopConflictProbability >= 0.1 || severeTweetHits >= 4);
+    const blockNewEntries = riskScore >= 82;
+    const forceExit = riskScore >= 92;
 
     return Response.json(
       {
@@ -94,6 +97,7 @@ export const onRequestGet = async () => {
         fetchedAt: new Date().toISOString(),
         latestTimestamp: headData?.latestTimestamp ?? null,
         riskScore,
+        preferShortEntries,
         blockNewEntries,
         forceExit,
         reasons,
@@ -120,6 +124,7 @@ export const onRequestGet = async () => {
         source: "https://www.pizzint.watch/polyglobe",
         fetchedAt: new Date().toISOString(),
         riskScore: 0,
+        preferShortEntries: false,
         blockNewEntries: false,
         forceExit: false,
         reasons: ["polyglobe risk feed unavailable"],
