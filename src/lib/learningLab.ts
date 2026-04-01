@@ -50,7 +50,7 @@ export type LearningModel = {
   };
 };
 
-export const LEARNING_MODEL_STORAGE_KEY = 'learningModel:v2';
+export const LEARNING_MODEL_STORAGE_KEY = 'learningModel:v3';
 const MAX_SOURCE_AGENTS = 10;
 
 function clamp(value: number, min: number, max: number) {
@@ -218,7 +218,7 @@ export function buildUnifiedLearningModel(agents: Agent[], lang: Language): Lear
   const entryFocus =
     lang === 'zh'
       ? [
-          '優先沿用前六名模型共同有效的進場邏輯，只在高品質訊號時出手。',
+          '優先沿用前十名模型共同有效的進場邏輯，只在高品質訊號時出手。',
           `將進場門檻統一到 ${params.threshold.toFixed(4)} 左右，減少弱訊號造成的噪音交易。`,
           '優先觀察近期反覆出現的強勢商品，並限制同時掃描標的數量。',
         ]
@@ -244,7 +244,7 @@ export function buildUnifiedLearningModel(agents: Agent[], lang: Language): Lear
   const reviewNotes =
     lang === 'zh'
       ? [
-          `來源來自儀表板前六名 AI：${sourceAgents.map((agent) => agent.name).join('、')}。`,
+          `來源來自儀表板前十名 AI：${sourceAgents.map((agent) => agent.name).join('、')}。`,
           `目前共複盤 ${sourceClosedTrades.length} 筆已平倉資料，勝率 ${winRate.toFixed(1)}%，平均單筆 ${avgPnl >= 0 ? '+' : ''}$${avgPnl.toFixed(2)}。`,
           avgLeverage >= 8
             ? '來源策略平均槓桿偏高，因此新模型已主動壓低槓桿上限。'
@@ -261,7 +261,7 @@ export function buildUnifiedLearningModel(agents: Agent[], lang: Language): Lear
   const strategyTitle = lang === 'zh' ? 'AI#101 融合學習模型' : 'AI#101 Unified Learning Model';
   const unifiedStrategy =
     lang === 'zh'
-      ? `融合前六名盈利策略的共通信號，保留 ${sourceStrategyTypes.slice(0, 3).join(' / ')} 的有效進場特徵，並用更保守的風控去執行。`
+      ? `融合前十名盈利策略的共通信號，保留 ${sourceStrategyTypes.slice(0, 3).join(' / ')} 的有效進場特徵，並用更保守的風控去執行。`
       : `Blend the shared signals from the top ten profitable strategies, keep the best entry traits from ${sourceStrategyTypes.slice(0, 3).join(' / ')}, and execute them with tighter risk control.`;
 
   const sourceFingerprint = [
@@ -290,7 +290,7 @@ export function buildUnifiedLearningModel(agents: Agent[], lang: Language): Lear
     reviewNotes,
     transferNote:
       lang === 'zh'
-        ? '每當前六名來源策略出現新的平倉資料，這個融合模型就會重新整理，供 AI#101 使用。'
+        ? '每當前十名來源策略出現新的平倉資料，這個融合模型就會重新整理，供 AI#101 使用。'
         : 'Whenever the source top-ten strategies produce a new closed trade, this unified model is refreshed for AI#101.',
     params,
   };

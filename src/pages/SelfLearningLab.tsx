@@ -621,7 +621,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
             nextMemory.lessons = pushLesson(
               nextMemory,
               lang === 'zh'
-                ? `新來源樣本累積到 ${activeModel.closedTradesReviewed} 筆，AI#101 已重新吸收前六名的平倉經驗。`
+                ? `新來源樣本累積到 ${activeModel.closedTradesReviewed} 筆，AI#101 已重新吸收前十名的平倉經驗。`
                 : `Source samples increased to ${activeModel.closedTradesReviewed}. AI#101 absorbed the latest top-ten closed-trade feedback.`
             );
           }
