@@ -654,7 +654,7 @@ function AppContent() {
         systemLogsBody: '這裡只顯示介面與 AI#101 沙盒功能更新，不會修改任何儀表板數據資料。',
         logs: [
           '儀表板 AI 卡片已可直接點擊開啟詳情，手機版也已完成點擊適配。',
-          'AI#101 現在只會在前六名來源策略出現平倉資料後才接收最新模型。',
+          'AI#101 現在只會在前十名來源策略出現平倉資料後才接收最新模型。',
           'AI#101 已加入樣本門檻、最多 5 筆持倉，以及實際艙位大小顯示。',
           '以上調整只影響介面與 AI#101 沙盒，不會動到主儀表板數據。',
         ],
@@ -699,7 +699,7 @@ function AppContent() {
         systemLogsBody: 'This area shows interface and AI#101 sandbox updates only. It does not modify any dashboard data.',
         logs: [
           'Dashboard agent cards now open detail directly, including mobile-friendly tapping.',
-          'AI#101 now receives new models only after the top-six source strategies produce closed trades.',
+          'AI#101 now receives new models only after the top-ten source strategies produce closed trades.',
           'AI#101 now enforces a sample gate, a five-position cap, and real position-size display.',
           'These changes affect UI and the AI#101 sandbox only, not the main dashboard dataset.',
         ],

@@ -51,7 +51,7 @@ export type LearningModel = {
 };
 
 export const LEARNING_MODEL_STORAGE_KEY = 'learningModel:v2';
-const MAX_SOURCE_AGENTS = 6;
+const MAX_SOURCE_AGENTS = 10;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -223,7 +223,7 @@ export function buildUnifiedLearningModel(agents: Agent[], lang: Language): Lear
           '優先觀察近期反覆出現的強勢商品，並限制同時掃描標的數量。',
         ]
       : [
-          'Reuse the entry logic shared by the top six strategies and trade only on higher-quality setups.',
+          'Reuse the entry logic shared by the top ten strategies and trade only on higher-quality setups.',
           `Keep the unified entry threshold around ${params.threshold.toFixed(4)} to reduce low-quality noise trades.`,
           'Favor symbols that repeatedly appear in the strongest agents and limit concurrent scan breadth.',
         ];
@@ -251,7 +251,7 @@ export function buildUnifiedLearningModel(agents: Agent[], lang: Language): Lear
             : '來源策略槓桿相對可控，因此新模型保留中低槓桿設定。',
         ]
       : [
-          `Source set comes from the dashboard top six agents: ${sourceAgents.map((agent) => agent.name).join(', ')}.`,
+          `Source set comes from the dashboard top ten agents: ${sourceAgents.map((agent) => agent.name).join(', ')}.`,
           `The replay covers ${sourceClosedTrades.length} closed trades with ${winRate.toFixed(1)}% win rate and ${avgPnl >= 0 ? '+' : ''}$${avgPnl.toFixed(2)} average trade.`,
           avgLeverage >= 8
             ? 'Source leverage runs hot, so the new model lowers the leverage ceiling on purpose.'
@@ -262,7 +262,7 @@ export function buildUnifiedLearningModel(agents: Agent[], lang: Language): Lear
   const unifiedStrategy =
     lang === 'zh'
       ? `融合前六名盈利策略的共通信號，保留 ${sourceStrategyTypes.slice(0, 3).join(' / ')} 的有效進場特徵，並用更保守的風控去執行。`
-      : `Blend the shared signals from the top six profitable strategies, keep the best entry traits from ${sourceStrategyTypes.slice(0, 3).join(' / ')}, and execute them with tighter risk control.`;
+      : `Blend the shared signals from the top ten profitable strategies, keep the best entry traits from ${sourceStrategyTypes.slice(0, 3).join(' / ')}, and execute them with tighter risk control.`;
 
   const sourceFingerprint = [
     sourceAgents.map((agent) => agent.id).join(','),
@@ -291,7 +291,7 @@ export function buildUnifiedLearningModel(agents: Agent[], lang: Language): Lear
     transferNote:
       lang === 'zh'
         ? '每當前六名來源策略出現新的平倉資料，這個融合模型就會重新整理，供 AI#101 使用。'
-        : 'Whenever the source top-six strategies produce a new closed trade, this unified model is refreshed for AI#101.',
+        : 'Whenever the source top-ten strategies produce a new closed trade, this unified model is refreshed for AI#101.',
     params,
   };
 }

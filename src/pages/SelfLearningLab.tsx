@@ -259,7 +259,10 @@ function parseState(raw: string | null, model: LearningModel | null): Ai101State
         learnedTradeCount: Number(parsedMemory?.learnedTradeCount) || 0,
         profitableTradeCount: Number(parsedMemory?.profitableTradeCount) || 0,
         losingTradeCount: Number(parsedMemory?.losingTradeCount) || 0,
-        sourceSamplesLearned: Number(parsedMemory?.sourceSamplesLearned) || Number(model?.closedTradesReviewed) || 0,
+        sourceSamplesLearned: Math.max(
+          Number(parsedMemory?.sourceSamplesLearned) || 0,
+          Number(model?.closedTradesReviewed) || 0,
+        ),
         modelReceiveCount: Number(parsedMemory?.modelReceiveCount) || 0,
         lastLearnedAt: typeof parsedMemory?.lastLearnedAt === 'number' ? parsedMemory.lastLearnedAt : null,
         lessons: Array.isArray(parsedMemory?.lessons) ? parsedMemory!.lessons.slice(0, MAX_MEMORY_LESSONS) : [],
@@ -510,7 +513,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
         sampleMemory: {
           ...prev.sampleMemory,
           modelReceiveCount: prev.sampleMemory.modelReceiveCount + 1,
-          sourceSamplesLearned: nextModel.closedTradesReviewed,
+          sourceSamplesLearned: Math.max(prev.sampleMemory.sourceSamplesLearned, nextModel.closedTradesReviewed),
           lessons: pushLesson(
             prev.sampleMemory,
             lang === 'zh'
@@ -535,7 +538,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           sampleMemory: {
             ...prev.sampleMemory,
             modelReceiveCount: prev.sampleMemory.modelReceiveCount + 1,
-            sourceSamplesLearned: latest.closedTradesReviewed,
+            sourceSamplesLearned: Math.max(prev.sampleMemory.sourceSamplesLearned, latest.closedTradesReviewed),
             lessons: pushLesson(
               prev.sampleMemory,
               lang === 'zh'
@@ -614,11 +617,11 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
               nextMemory,
               lang === 'zh'
                 ? `新來源樣本累積到 ${activeModel.closedTradesReviewed} 筆，AI#101 已重新吸收前六名的平倉經驗。`
-                : `Source samples increased to ${activeModel.closedTradesReviewed}. AI#101 absorbed the latest top-six closed-trade feedback.`
+                : `Source samples increased to ${activeModel.closedTradesReviewed}. AI#101 absorbed the latest top-ten closed-trade feedback.`
             );
           }
 
-          const shouldTrade = Boolean(activeModel && activeModel.closedTradesReviewed >= MIN_MODEL_SAMPLE_SIZE);
+          const shouldTrade = Boolean(activeModel && nextMemory.sourceSamplesLearned >= MIN_MODEL_SAMPLE_SIZE);
           const liveRisk = externalRiskRef.current;
           const shouldBlockNewEntries = liveRisk.blockNewEntries || marketCrash.triggered;
           const shouldForceExit = liveRisk.forceExit || marketCrash.triggered;
@@ -894,7 +897,7 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
               <SmallStat label={t.modelThreshold} value={model.params.threshold.toFixed(4)} />
               <SmallStat label={t.modelExit} value={model.params.exitThreshold.toFixed(4)} />
               <SmallStat label={t.modelRisk} value={`${(model.params.maxRiskPerTrade * 100).toFixed(1)}%`} />
-              <SmallStat label={t.sampleGate} value={`${model.closedTradesReviewed}/${MIN_MODEL_SAMPLE_SIZE}`} />
+              <SmallStat label={t.sampleGate} value={`${sandbox.sampleMemory.sourceSamplesLearned}/${MIN_MODEL_SAMPLE_SIZE}`} />
               <SmallStat label={t.maxPositions} value={MAX_AI101_POSITIONS} />
               <SmallStat label={t.preferredSymbols} value={model.params.preferredSymbols.slice(0, 4).join(', ') || '-'} />
             </div>
