@@ -4,6 +4,8 @@ export type PriceMap = Record<string, number>;
 export type StrategyExecutionOptions = {
   entriesEnabled?: boolean;
   preferredEntrySide?: 'LONG' | 'SHORT' | null;
+  bullishBias?: number;
+  bearishBias?: number;
 };
 
 const DEFAULT_SYMBOLS = ['BTCUSDT'];
@@ -256,6 +258,15 @@ function previousPrice(history: number[], currentPrice: number) {
   if (history.length >= 2) return history[history.length - 2];
   if (history.length >= 1) return history[history.length - 1];
   return currentPrice;
+}
+
+function getDirectionalBiasBoost(
+  side: Position['side'],
+  options: StrategyExecutionOptions,
+) {
+  const bullishBias = options.bullishBias ?? 0;
+  const bearishBias = options.bearishBias ?? 0;
+  return side === 'LONG' ? bullishBias - bearishBias : bearishBias - bullishBias;
 }
 
 function unrealizedPnl(pos: Position, currentPrice: number) {
@@ -735,7 +746,9 @@ function executeSmcStrategy(
       const sideBiasA = preferredEntrySide && a.signals.direction === preferredEntrySide ? 1 : 0;
       const sideBiasB = preferredEntrySide && b.signals.direction === preferredEntrySide ? 1 : 0;
       if (sideBiasA !== sideBiasB) return sideBiasB - sideBiasA;
-      return b.signals.confirmationScore - a.signals.confirmationScore;
+      const weightedA = a.signals.confirmationScore + getDirectionalBiasBoost(a.signals.direction as Position['side'], options) * 2;
+      const weightedB = b.signals.confirmationScore + getDirectionalBiasBoost(b.signals.direction as Position['side'], options) * 2;
+      return weightedB - weightedA;
     })
     .slice(0, params.scanCount ?? 12);
 
@@ -747,6 +760,7 @@ function executeSmcStrategy(
     const side = candidate.signals.direction as Position['side'];
     const isAgainstRiskBias = preferredEntrySide !== null && side !== preferredEntrySide;
     if (isAgainstRiskBias && candidate.signals.confirmationScore < (params.confirmationThreshold ?? 4) + 2) continue;
+    if (candidate.signals.confirmationScore + getDirectionalBiasBoost(side, options) * 2 < (params.confirmationThreshold ?? 4)) continue;
     const leverage = Math.min(
       getMaxLeverage(candidate.symbol),
       Math.max(params.leverageMin ?? 4, Math.round((params.leverageMin ?? 4) + candidate.signals.confirmationScore / 2)),
@@ -761,6 +775,7 @@ function executeSmcStrategy(
     const reason = [
       `SMC ${side}`,
       preferredEntrySide && side === preferredEntrySide ? 'risk bias aligned' : null,
+      getDirectionalBiasBoost(side, options) > 0 ? 'event bias support' : null,
       `OI ${candidate.signals.oiBias > 0 ? 'up' : 'down'}`,
       `CVD ${candidate.signals.cvdBias > 0 ? 'up' : 'down'}`,
       candidate.signals.reasons.join(' + '),
@@ -925,6 +940,7 @@ function executeGenericStrategy(
     if (!shouldEnter) continue;
     const isAgainstRiskBias = preferredEntrySide !== null && side !== preferredEntrySide;
     if (isAgainstRiskBias && Math.abs(priceChange) <= params.threshold * 1.8) continue;
+    if (Math.abs(priceChange) + getDirectionalBiasBoost(side, options) * params.threshold <= params.threshold * 0.92) continue;
 
     const leverage = Math.min(
       getMaxLeverage(symbol),
@@ -937,8 +953,11 @@ function executeGenericStrategy(
     const entryReason = preferredEntrySide && side === preferredEntrySide
       ? `${reason} | risk bias aligned`
       : reason;
+    const finalReason = getDirectionalBiasBoost(side, options) > 0
+      ? `${entryReason} | event bias support`
+      : entryReason;
 
-    const result = openPosition(symbol, side, currentPrice, leverage, margin, positions, trades, balance, entryReason);
+    const result = openPosition(symbol, side, currentPrice, leverage, margin, positions, trades, balance, finalReason);
     balance = result.balance;
     positions = result.positions;
     trades = result.trades;

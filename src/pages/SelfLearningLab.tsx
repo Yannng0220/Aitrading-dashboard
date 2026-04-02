@@ -38,6 +38,9 @@ type SampleMemory = {
 type ExternalRiskSnapshot = {
   fetchedAt: string | null;
   riskScore: number;
+  bullishBias: number;
+  bearishBias: number;
+  eventConfidence: number;
   preferShortEntries: boolean;
   blockNewEntries: boolean;
   forceExit: boolean;
@@ -57,6 +60,9 @@ const EXTERNAL_RISK_REFRESH_MS = 30000;
 const defaultExternalRisk: ExternalRiskSnapshot = {
   fetchedAt: null,
   riskScore: 0,
+  bullishBias: 0,
+  bearishBias: 0,
+  eventConfidence: 0,
   preferShortEntries: false,
   blockNewEntries: false,
   forceExit: false,
@@ -463,6 +469,9 @@ async function fetchExternalRiskSnapshot(): Promise<ExternalRiskSnapshot> {
     return {
       fetchedAt: typeof data?.fetchedAt === 'string' ? data.fetchedAt : null,
       riskScore: Number(data?.riskScore) || 0,
+      bullishBias: Number(data?.bullishBias) || 0,
+      bearishBias: Number(data?.bearishBias) || 0,
+      eventConfidence: Number(data?.eventConfidence) || 0,
       preferShortEntries: Boolean(data?.preferShortEntries),
       blockNewEntries: Boolean(data?.blockNewEntries),
       forceExit: Boolean(data?.forceExit),
@@ -630,7 +639,14 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           const liveRisk = externalRiskRef.current;
           const shouldBlockNewEntries = marketCrash.triggered;
           const shouldForceExit = marketCrash.triggered;
-          const preferredEntrySide = liveRisk.preferShortEntries && !shouldForceExit ? 'SHORT' : null;
+          const preferredEntrySide =
+            !shouldForceExit && liveRisk.eventConfidence >= 0.35
+              ? liveRisk.bearishBias > liveRisk.bullishBias
+                ? 'SHORT'
+                : liveRisk.bullishBias > liveRisk.bearishBias
+                  ? 'LONG'
+                  : null
+              : null;
 
           const updatedAgent = shouldForceExit
             ? {
@@ -649,6 +665,8 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
                   ...executeStrategy(agentWithLatestModel, allPrices, historyMapRef.current, {
                     entriesEnabled: !shouldBlockNewEntries,
                     preferredEntrySide,
+                    bullishBias: liveRisk.bullishBias,
+                    bearishBias: liveRisk.bearishBias,
                   }),
                 }
               : {
@@ -825,7 +843,15 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
           <SmallStat label={t.riskScore} value={externalRisk.riskScore} />
           <SmallStat
             label={t.entryGate}
-            value={externalRisk.forceExit || externalRisk.blockNewEntries ? t.riskBlocked : externalRisk.preferShortEntries ? t.riskShortBias : t.riskClear}
+            value={
+              externalRisk.forceExit || externalRisk.blockNewEntries
+                ? t.riskBlocked
+                : externalRisk.eventConfidence >= 0.35 && externalRisk.bearishBias > externalRisk.bullishBias
+                  ? t.riskShortBias
+                  : externalRisk.eventConfidence >= 0.35 && externalRisk.bullishBias > externalRisk.bearishBias
+                    ? (lang === 'zh' ? '事件偏多' : 'Long bias active')
+                    : t.riskClear
+            }
           />
           <SmallStat label={t.blackSwanExit} value={marketCrashActive ? t.blackSwanDetected : t.blackSwanSafe} />
           <SmallStat label="Source" value="Polyglobe" />

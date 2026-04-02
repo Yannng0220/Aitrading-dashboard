@@ -34,9 +34,26 @@ const SEVERE_KEYWORDS = [
   "taiwan",
 ];
 
+const BULLISH_KEYWORDS = [
+  "ceasefire",
+  "truce",
+  "peace",
+  "deal",
+  "agreement",
+  "stimulus",
+  "reopen",
+  "breakthrough",
+  "supply restart",
+];
+
 function scoreTweet(text: string) {
   const lower = text.toLowerCase();
   return SEVERE_KEYWORDS.reduce((score, keyword) => score + (lower.includes(keyword) ? 1 : 0), 0);
+}
+
+function scoreBullishTweet(text: string) {
+  const lower = text.toLowerCase();
+  return BULLISH_KEYWORDS.reduce((score, keyword) => score + (lower.includes(keyword) ? 1 : 0), 0);
 }
 
 export const onRequestGet = async () => {
@@ -61,6 +78,7 @@ export const onRequestGet = async () => {
     const alertTweets = tweets.filter((tweet) => tweet.isAlert);
     const matchedTweets = tweets.filter((tweet) => tweet.hasMatch && Number(tweet.matchQuality ?? 0) >= 0.5);
     const severeTweetHits = tweets.reduce((sum, tweet) => sum + scoreTweet(tweet.text ?? ""), 0);
+    const bullishTweetHits = tweets.reduce((sum, tweet) => sum + scoreBullishTweet(tweet.text ?? ""), 0);
     const topConflictProbability = markets.reduce((max, market) => Math.max(max, Number(market.price ?? 0)), 0);
     const averageTopConflictProbability =
       markets.slice(0, 5).reduce((sum, market) => sum + Number(market.price ?? 0), 0) / Math.max(Math.min(markets.length, 5), 1);
@@ -85,9 +103,28 @@ export const onRequestGet = async () => {
     if (elevatedVolumeMarkets >= 2) reasons.push(`${elevatedVolumeMarkets} high-volume conflict markets`);
     if (reasons.length === 0) reasons.push("external geopolitical risk is currently muted");
 
-    const preferShortEntries =
-      riskScore >= 45 &&
-      (topConflictProbability >= 0.15 || averageTopConflictProbability >= 0.1 || severeTweetHits >= 4);
+    const bearishBias = Math.max(
+      0,
+      Math.min(
+        1,
+        alertTweets.length * 0.08 +
+          matchedTweets.length * 0.06 +
+          severeTweetHits * 0.05 +
+          topConflictProbability * 0.8 +
+          averageTopConflictProbability * 0.5,
+      ),
+    );
+    const bullishBias = Math.max(
+      0,
+      Math.min(
+        1,
+        bullishTweetHits * 0.12 +
+          Math.max(0, 0.18 - topConflictProbability) * 1.4 +
+          Math.max(0, 0.12 - averageTopConflictProbability) * 1.2,
+      ),
+    );
+    const eventConfidence = Math.max(bullishBias, bearishBias);
+    const preferShortEntries = bearishBias > bullishBias && eventConfidence >= 0.35;
     const blockNewEntries = false;
     const forceExit = false;
 
@@ -97,6 +134,9 @@ export const onRequestGet = async () => {
         fetchedAt: new Date().toISOString(),
         latestTimestamp: headData?.latestTimestamp ?? null,
         riskScore,
+        bullishBias,
+        bearishBias,
+        eventConfidence,
         preferShortEntries,
         blockNewEntries,
         forceExit,
@@ -105,6 +145,7 @@ export const onRequestGet = async () => {
           alertTweets: alertTweets.length,
           matchedTweets: matchedTweets.length,
           severeTweetHits,
+          bullishTweetHits,
           topConflictProbability,
           averageTopConflictProbability,
           hotConflictMarkets,
@@ -124,6 +165,9 @@ export const onRequestGet = async () => {
         source: "https://www.pizzint.watch/polyglobe",
         fetchedAt: new Date().toISOString(),
         riskScore: 0,
+        bullishBias: 0,
+        bearishBias: 0,
+        eventConfidence: 0,
         preferShortEntries: false,
         blockNewEntries: false,
         forceExit: false,
