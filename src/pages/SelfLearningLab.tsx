@@ -628,8 +628,8 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
 
           const shouldTrade = Boolean(activeModel && nextMemory.sourceSamplesLearned >= MIN_MODEL_SAMPLE_SIZE);
           const liveRisk = externalRiskRef.current;
-          const shouldBlockNewEntries = liveRisk.blockNewEntries || marketCrash.triggered;
-          const shouldForceExit = liveRisk.forceExit || marketCrash.triggered;
+          const shouldBlockNewEntries = marketCrash.triggered;
+          const shouldForceExit = marketCrash.triggered;
           const preferredEntrySide = liveRisk.preferShortEntries && !shouldForceExit ? 'SHORT' : null;
 
           const updatedAgent = shouldForceExit
