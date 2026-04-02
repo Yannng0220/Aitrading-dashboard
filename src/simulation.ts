@@ -731,7 +731,12 @@ function executeSmcStrategy(
       signals: buildSmcSignals(allHistories[symbol] ?? [], allPrices[symbol], params),
     }))
     .filter((item) => item.signals.direction !== null)
-    .sort((a, b) => b.signals.confirmationScore - a.signals.confirmationScore)
+    .sort((a, b) => {
+      const sideBiasA = preferredEntrySide && a.signals.direction === preferredEntrySide ? 1 : 0;
+      const sideBiasB = preferredEntrySide && b.signals.direction === preferredEntrySide ? 1 : 0;
+      if (sideBiasA !== sideBiasB) return sideBiasB - sideBiasA;
+      return b.signals.confirmationScore - a.signals.confirmationScore;
+    })
     .slice(0, params.scanCount ?? 12);
 
   for (const candidate of candidates) {
@@ -740,7 +745,8 @@ function executeSmcStrategy(
     if (candidate.signals.confirmationScore < (params.confirmationThreshold ?? 4)) continue;
 
     const side = candidate.signals.direction as Position['side'];
-    if (preferredEntrySide && side !== preferredEntrySide) continue;
+    const isAgainstRiskBias = preferredEntrySide !== null && side !== preferredEntrySide;
+    if (isAgainstRiskBias && candidate.signals.confirmationScore < (params.confirmationThreshold ?? 4) + 2) continue;
     const leverage = Math.min(
       getMaxLeverage(candidate.symbol),
       Math.max(params.leverageMin ?? 4, Math.round((params.leverageMin ?? 4) + candidate.signals.confirmationScore / 2)),
@@ -754,11 +760,12 @@ function executeSmcStrategy(
 
     const reason = [
       `SMC ${side}`,
+      preferredEntrySide && side === preferredEntrySide ? 'risk bias aligned' : null,
       `OI ${candidate.signals.oiBias > 0 ? 'up' : 'down'}`,
       `CVD ${candidate.signals.cvdBias > 0 ? 'up' : 'down'}`,
       candidate.signals.reasons.join(' + '),
       `OB ${candidate.signals.orderBlockMid.toFixed(4)}`,
-    ].join(' | ');
+    ].filter(Boolean).join(' | ');
 
     const result = openPosition(candidate.symbol, side, candidate.price, leverage, margin, positions, trades, balance, reason);
     balance = result.balance;
@@ -916,7 +923,8 @@ function executeGenericStrategy(
     }
 
     if (!shouldEnter) continue;
-    if (preferredEntrySide && side !== preferredEntrySide) continue;
+    const isAgainstRiskBias = preferredEntrySide !== null && side !== preferredEntrySide;
+    if (isAgainstRiskBias && Math.abs(priceChange) <= params.threshold * 1.8) continue;
 
     const leverage = Math.min(
       getMaxLeverage(symbol),
@@ -926,7 +934,11 @@ function executeGenericStrategy(
     const margin = Math.min(availableCash * 0.9, balance * Math.min(params.riskTolerance, 0.25));
     if (margin < 25) continue;
 
-    const result = openPosition(symbol, side, currentPrice, leverage, margin, positions, trades, balance, reason);
+    const entryReason = preferredEntrySide && side === preferredEntrySide
+      ? `${reason} | risk bias aligned`
+      : reason;
+
+    const result = openPosition(symbol, side, currentPrice, leverage, margin, positions, trades, balance, entryReason);
     balance = result.balance;
     positions = result.positions;
     trades = result.trades;
