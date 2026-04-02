@@ -73,7 +73,7 @@ const defaultExternalRisk: ExternalRiskSnapshot = {
 const copy = {
   zh: {
     heroTitle: 'AI 自學實驗室',
-    heroBody: '這一頁只運行 AI#101。它會讀取學習頁整理好的融合模型，並用獨立的 1000 USD 沙盒資金持續驗證成效。',
+    heroBody: '這一頁只運行 AI#101。它會讀取學習頁整理好的融合模型，並用獨立的 100 USD 沙盒資金持續驗證成效。',
     heroNote: 'AI#101 的策略、績效、持倉與交易都只存在這個實驗室，不會改動主儀表板的 100 個 AI 數據。',
     waiting: '目前還沒有學習模型可供 AI#101 使用，請先到學習頁累積來源 AI 的平倉資料。',
     totalProfit: 'AI#101 沙盒獲利',
@@ -85,13 +85,13 @@ const copy = {
     reviewTitle: 'AI#101 成效複盤',
     sampleMemoryTitle: 'AI#101 樣本記憶',
     sampleMemoryBody: '每次有新平倉樣本進來，AI#101 都會記住這筆單的盈虧結果並微調自己的參數。',
-    externalRiskTitle: '外部風險濾網',
-    externalRiskBody: 'AI#101 會參考 Polyglobe 的 OSINT 與地緣市場風險訊號，再決定是否允許開新單。',
+    externalRiskTitle: '外部風險判讀',
+    externalRiskBody: 'AI#101 會參考 Polyglobe 的 OSINT 與地緣市場事件，作為多空方向與信心加權依據。',
     riskScore: '風險分數',
     entryGate: '開單狀態',
-    riskBlocked: '暫停新單',
-    riskClear: '可正常開單',
-    riskShortBias: '戰爭風險偏空',
+    riskBlocked: '黑天鵝保護',
+    riskClear: '中性觀望',
+    riskShortBias: '事件偏空',
     blackSwanExit: '黑天鵝保護',
     blackSwanDetected: '已觸發急跌保護',
     blackSwanSafe: '未觸發急跌保護',
@@ -130,7 +130,7 @@ const copy = {
   },
   en: {
     heroTitle: 'AI Self-Learning Lab',
-    heroBody: 'This page runs AI#101 only. It reads the unified model generated on the learning page and validates it with an isolated 1000 USD sandbox balance.',
+    heroBody: 'This page runs AI#101 only. It reads the unified model generated on the learning page and validates it with an isolated 100 USD sandbox balance.',
     heroNote: 'AI#101 strategy, performance, positions, and trades live only inside this lab and never modify the main dashboard 100-agent dataset.',
     waiting: 'No learning model is available for AI#101 yet. Visit the learning page first so source agents can build more closed-trade history.',
     totalProfit: 'AI#101 Sandbox Profit',
@@ -142,12 +142,12 @@ const copy = {
     reviewTitle: 'AI#101 Performance Review',
     sampleMemoryTitle: 'AI#101 Sample Memory',
     sampleMemoryBody: 'Whenever a new closed-trade sample arrives, AI#101 stores the result and adjusts its own execution parameters.',
-    externalRiskTitle: 'External Risk Filter',
-    externalRiskBody: 'AI#101 checks Polyglobe OSINT and geopolitical market signals before allowing new entries.',
+    externalRiskTitle: 'External Event Bias',
+    externalRiskBody: 'AI#101 uses Polyglobe OSINT and geopolitical events as direction and confidence weighting, not as a blanket trade pause.',
     riskScore: 'Risk Score',
     entryGate: 'Entry Status',
-    riskBlocked: 'New entries paused',
-    riskClear: 'New entries allowed',
+    riskBlocked: 'Black swan guard',
+    riskClear: 'Neutral bias',
     riskShortBias: 'Short bias active',
     blackSwanExit: 'Black Swan Guard',
     blackSwanDetected: 'Crash protection triggered',
@@ -702,6 +702,49 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
     [sandbox.agent.trades]
   );
   const latestLessons = useMemo(() => sandbox.sampleMemory.lessons.slice(0, 4), [sandbox.sampleMemory.lessons]);
+  const riskUi =
+    lang === 'zh'
+      ? {
+          title: '外部風險判讀',
+          body: '外部事件在這裡不是停單器，而是多空方向與信心加權。只有遇到黑天鵝急跌保護時，AI#101 才會強制退場。',
+          eventBias: '事件判讀',
+          longBias: '事件偏多',
+          shortBias: '事件偏空',
+          neutralBias: '中性觀望',
+          guard: '黑天鵝保護',
+          guardActive: '已觸發急跌保護',
+          guardIdle: '未觸發急跌保護',
+          bullishBias: '偏多強度',
+          bearishBias: '偏空強度',
+          confidence: '事件信心',
+          source: '風險來源',
+          sourceValue: 'Polyglobe OSINT',
+          calm: '目前沒有明顯的外部事件衝擊，AI#101 會以模型訊號為主，再疊加事件方向權重。',
+        }
+      : {
+          title: 'External Event Bias',
+          body: 'External events act as directional bias and confidence weighting here, not as a blanket trade pause. Only black swan crash protection can force AI#101 out.',
+          eventBias: 'Event Bias',
+          longBias: 'Long bias active',
+          shortBias: 'Short bias active',
+          neutralBias: 'Neutral bias',
+          guard: 'Black Swan Guard',
+          guardActive: 'Crash protection triggered',
+          guardIdle: 'Crash protection idle',
+          bullishBias: 'Bullish Bias',
+          bearishBias: 'Bearish Bias',
+          confidence: 'Event Confidence',
+          source: 'Risk Source',
+          sourceValue: 'Polyglobe OSINT',
+          calm: 'No major external event shock is active right now. AI#101 mainly follows the model and layers in event direction weighting.',
+        };
+  const externalBiasStatus = marketCrashActive
+    ? riskUi.guard
+    : externalRisk.eventConfidence >= 0.35 && externalRisk.bearishBias > externalRisk.bullishBias
+      ? riskUi.shortBias
+      : externalRisk.eventConfidence >= 0.35 && externalRisk.bullishBias > externalRisk.bearishBias
+        ? riskUi.longBias
+        : riskUi.neutralBias;
 
   if (!model) {
     return (
@@ -836,28 +879,23 @@ export default function SelfLearningLab({ seedPrices, lang }: SelfLearningLabPro
       <section className="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-2xl">
         <div className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/60">
           <ShieldAlert className="h-4 w-4 text-amber-300" />
-          {t.externalRiskTitle}
+          {riskUi.title}
         </div>
-        <p className="mb-4 text-sm leading-relaxed text-white/70">{t.externalRiskBody}</p>
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <p className="mb-4 text-sm leading-relaxed text-white/70">{riskUi.body}</p>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
           <SmallStat label={t.riskScore} value={externalRisk.riskScore} />
-          <SmallStat
-            label={t.entryGate}
-            value={
-              externalRisk.forceExit || externalRisk.blockNewEntries
-                ? t.riskBlocked
-                : externalRisk.eventConfidence >= 0.35 && externalRisk.bearishBias > externalRisk.bullishBias
-                  ? t.riskShortBias
-                  : externalRisk.eventConfidence >= 0.35 && externalRisk.bullishBias > externalRisk.bearishBias
-                    ? (lang === 'zh' ? '事件偏多' : 'Long bias active')
-                    : t.riskClear
-            }
-          />
-          <SmallStat label={t.blackSwanExit} value={marketCrashActive ? t.blackSwanDetected : t.blackSwanSafe} />
-          <SmallStat label="Source" value="Polyglobe" />
+          <SmallStat label={riskUi.eventBias} value={externalBiasStatus} />
+          <SmallStat label={riskUi.guard} value={marketCrashActive ? riskUi.guardActive : riskUi.guardIdle} />
+          <SmallStat label={riskUi.bullishBias} value={`${(externalRisk.bullishBias * 100).toFixed(0)}%`} />
+          <SmallStat label={riskUi.bearishBias} value={`${(externalRisk.bearishBias * 100).toFixed(0)}%`} />
+          <SmallStat label={riskUi.confidence} value={`${(externalRisk.eventConfidence * 100).toFixed(0)}%`} />
+        </div>
+        <div className="mt-4 rounded-xl border border-white/5 bg-black/30 px-4 py-3 text-sm text-white/70">
+          <span className="mr-2 text-[11px] font-bold uppercase tracking-widest text-white/35">{riskUi.source}</span>
+          {riskUi.sourceValue}
         </div>
         <div className="mt-4 space-y-2">
-          {(externalRisk.reasons.length > 0 ? externalRisk.reasons : [lang === 'zh' ? '目前外部風險訊號平穩。' : 'External risk signals are currently calm.']).map((reason) => (
+          {(externalRisk.reasons.length > 0 ? externalRisk.reasons : [riskUi.calm]).map((reason) => (
             <div key={reason} className="rounded-lg border border-white/5 bg-black/30 px-3 py-2 text-sm text-white/75">
               {reason}
             </div>
