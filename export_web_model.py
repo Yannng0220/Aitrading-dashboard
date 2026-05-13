@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import onnx
 import torch
+from onnxconverter_common import float16
 
 from predict import build_model
 
@@ -27,14 +29,20 @@ def main() -> None:
 
     dummy_input = torch.randn(1, 3, image_size, image_size)
     onnx_path = export_dir / "pokemon-role-classifier.onnx"
+    temp_onnx_path = export_dir / "pokemon-role-classifier-fp32.onnx"
     torch.onnx.export(
         model,
         dummy_input,
-        onnx_path.as_posix(),
+        temp_onnx_path.as_posix(),
         input_names=["input"],
         output_names=["logits"],
         opset_version=17,
     )
+
+    fp32_model = onnx.load(temp_onnx_path.as_posix())
+    fp16_model = float16.convert_float_to_float16(fp32_model)
+    onnx.save(fp16_model, onnx_path.as_posix())
+    temp_onnx_path.unlink(missing_ok=True)
 
     config = {
         "classNames": class_names,
