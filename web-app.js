@@ -13,25 +13,42 @@ let session = null;
 let modelConfig = null;
 let selectedImage = null;
 
-// 把角色名稱轉成更直覺的中文顯示。
+// 角色名稱對照表。
 const roleLabelMap = {
   attack: "攻擊",
   defense: "防禦",
   support: "輔助",
 };
 
-// 載入 ONNX 模型與前處理設定。
+// 顯示狀態文字。
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
+// 載入 ONNX 模型與相關設定。
 async function loadModel() {
-  statusText.textContent = "模型載入中...";
-  modelConfig = await fetch("./web/model-config.json").then((response) => response.json());
+  setStatus("模型載入中...");
+
+  // 明確指定 wasm 檔位置，避免 onnxruntime-web 在自訂網域下找錯路徑。
+  ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
+  ort.env.wasm.numThreads = 1;
+
+  modelConfig = await fetch("./web/model-config.json").then((response) => {
+    if (!response.ok) {
+      throw new Error(`無法讀取 model-config.json，HTTP ${response.status}`);
+    }
+    return response.json();
+  });
+
   session = await ort.InferenceSession.create("./web/pokemon-role-classifier.onnx", {
     executionProviders: ["wasm"],
   });
-  statusText.textContent = "模型已就緒，可以開始分析。";
+
+  setStatus("模型已就緒，可以開始分析。");
   predictButton.disabled = false;
 }
 
-// 讀取使用者上傳的圖片並顯示預覽。
+// 讀取使用者圖片並顯示預覽。
 function handleImageChange(event) {
   const [file] = event.target.files ?? [];
   if (!file) {
@@ -45,7 +62,7 @@ function handleImageChange(event) {
   previewPlaceholder.hidden = true;
 }
 
-// 將圖片畫到 canvas，再轉成模型需要的 tensor。
+// 將圖片前處理成模型可用的 tensor。
 async function imageToTensor(file) {
   const bitmap = await createImageBitmap(file);
   const { imageSize, normalizeMean, normalizeStd } = modelConfig;
@@ -79,7 +96,7 @@ async function imageToTensor(file) {
   return new ort.Tensor("float32", floatData, [1, 3, imageSize, imageSize]);
 }
 
-// 將模型輸出的 logits 轉成機率。
+// 將 logits 轉成機率。
 function softmax(values) {
   const maxValue = Math.max(...values);
   const exps = values.map((value) => Math.exp(value - maxValue));
@@ -87,7 +104,7 @@ function softmax(values) {
   return exps.map((value) => value / sum);
 }
 
-// 把推論結果渲染到畫面上。
+// 將推論結果顯示到頁面上。
 function renderResults(probabilities) {
   const scores = modelConfig.classNames.map((className, index) => ({
     className,
@@ -122,7 +139,7 @@ function renderResults(probabilities) {
   }
 }
 
-// 執行瀏覽器端推論。
+// 執行推論。
 async function runPrediction() {
   if (!selectedImage || !session || !modelConfig) {
     return;
@@ -130,7 +147,7 @@ async function runPrediction() {
 
   try {
     predictButton.disabled = true;
-    statusText.textContent = "分析中...";
+    setStatus("分析中...");
 
     const inputTensor = await imageToTensor(selectedImage);
     const outputs = await session.run({ [modelConfig.inputName]: inputTensor });
@@ -138,10 +155,11 @@ async function runPrediction() {
     const probabilities = softmax(logits);
 
     renderResults(probabilities);
-    statusText.textContent = "分析完成。";
+    setStatus("分析完成。");
   } catch (error) {
     console.error(error);
-    statusText.textContent = "分析失敗，請確認模型檔與網站部署設定。";
+    const detail = error instanceof Error ? error.message : String(error);
+    setStatus(`分析失敗：${detail}`);
   } finally {
     predictButton.disabled = false;
   }
@@ -149,7 +167,9 @@ async function runPrediction() {
 
 imageInput.addEventListener("change", handleImageChange);
 predictButton.addEventListener("click", runPrediction);
+
 loadModel().catch((error) => {
   console.error(error);
-  statusText.textContent = "模型載入失敗，請確認網站能讀取 ONNX 檔案。";
+  const detail = error instanceof Error ? error.message : String(error);
+  setStatus(`模型載入失敗：${detail}`);
 });
