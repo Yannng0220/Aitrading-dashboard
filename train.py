@@ -14,28 +14,27 @@ from torchvision import models, transforms
 from dataset import ROLE_NAMES, PokemonRoleDataset, load_labels
 
 
-# 設定參數
+# 解析模型訓練參數。
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train a Pokemon role classifier.")
     parser.add_argument("--labels", default="labels.csv", help="Path to labels CSV.")
-    parser.add_argument(
-        "--epochs", type=int, default=12, help="Number of training epochs."
-    )
+    parser.add_argument("--epochs", type=int, default=8, help="Number of training epochs.")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size.")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate.")
-    parser.add_argument(
-        "--image-size", type=int, default=224, help="Input image size for training."
-    )
-    parser.add_argument(
-        "--output-dir", default="artifacts", help="Folder to store checkpoints."
-    )
-    parser.add_argument(
-        "--val-size", type=float, default=0.2, help="Validation split ratio."
-    )
+    parser.add_argument("--image-size", type=int, default=224, help="Input image size.")
+    parser.add_argument("--output-dir", default="artifacts", help="Checkpoint folder.")
+    parser.add_argument("--val-size", type=float, default=0.2, help="Validation split ratio.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+    parser.add_argument(
+        "--architecture",
+        default="mobilenet_v3_small",
+        choices=["mobilenet_v3_small", "resnet18"],
+        help="Backbone architecture.",
+    )
     return parser.parse_args()
 
 
+# 定義訓練與驗證的影像前處理。
 def build_transforms(image_size: int) -> tuple[transforms.Compose, transforms.Compose]:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406],
@@ -48,7 +47,10 @@ def build_transforms(image_size: int) -> tuple[transforms.Compose, transforms.Co
             transforms.RandomHorizontalFlip(),
             transforms.RandomRotation(10),
             transforms.ColorJitter(
-                brightness=0.1, contrast=0.1, saturation=0.1, hue=0.02
+                brightness=0.1,
+                contrast=0.1,
+                saturation=0.1,
+                hue=0.02,
             ),
             transforms.ToTensor(),
             normalize,
@@ -66,23 +68,33 @@ def build_transforms(image_size: int) -> tuple[transforms.Compose, transforms.Co
     return train_transform, eval_transform
 
 
-# 建立ResNet18分類器，並把最後一層改成 3 類輸出。
-def build_model(num_classes: int) -> nn.Module:
-    weights = models.ResNet18_Weights.IMAGENET1K_V1
-    model = models.resnet18(weights=weights)
-    in_features = model.fc.in_features
-    model.fc = nn.Linear(in_features, num_classes)
-    return model
+# 建立分類模型。
+def build_model(num_classes: int, architecture: str) -> nn.Module:
+    if architecture == "resnet18":
+        model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+        in_features = model.fc.in_features
+        model.fc = nn.Linear(in_features, num_classes)
+        return model
+
+    if architecture == "mobilenet_v3_small":
+        model = models.mobilenet_v3_small(
+            weights=models.MobileNet_V3_Small_Weights.IMAGENET1K_V1
+        )
+        in_features = model.classifier[-1].in_features
+        model.classifier[-1] = nn.Linear(in_features, num_classes)
+        return model
+
+    raise ValueError(f"Unsupported architecture: {architecture}")
 
 
-# 讓較少見的類別有更高 loss 權重，避免訓練時被忽略。
+# 讓少數類別在 loss 中有更高權重。
 def build_weighted_loss(labels: list[int], device: torch.device) -> nn.Module:
     counts = torch.bincount(torch.tensor(labels), minlength=len(ROLE_NAMES)).float()
     weights = counts.sum() / counts.clamp(min=1.0)
     return nn.CrossEntropyLoss(weight=weights.to(device))
 
 
-# 讓少數類在抽樣時更常出現，降低訓練資料不平衡問題。
+# 讓少數類別在抽樣時更常被看到。
 def build_weighted_sampler(labels: list[int]) -> WeightedRandomSampler:
     counts = torch.bincount(torch.tensor(labels), minlength=len(ROLE_NAMES)).float()
     class_weights = counts.sum() / counts.clamp(min=1.0)
@@ -94,7 +106,7 @@ def build_weighted_sampler(labels: list[int]) -> WeightedRandomSampler:
     )
 
 
-# 對一個資料載入器完整跑一輪，可用於訓練或驗證。
+# 執行一個 epoch，可用於訓練或驗證。
 def run_epoch(
     model: nn.Module,
     loader: DataLoader,
@@ -127,12 +139,10 @@ def run_epoch(
         total_correct += (predictions == labels).sum().item()
         total_samples += images.size(0)
 
-    average_loss = total_loss / max(total_samples, 1)
-    accuracy = total_correct / max(total_samples, 1)
-    return average_loss, accuracy
+    return total_loss / max(total_samples, 1), total_correct / max(total_samples, 1)
 
 
-# 收集模型預測與真實標籤，供最後報表使用。
+# 收集驗證預測結果。
 @torch.no_grad()
 def evaluate_predictions(
     model: nn.Module,
@@ -146,28 +156,23 @@ def evaluate_predictions(
     for images, labels in loader:
         images = images.to(device)
         logits = model(images)
-        predictions = logits.argmax(dim=1).cpu().tolist()
-        all_predictions.extend(predictions)
+        all_predictions.extend(logits.argmax(dim=1).cpu().tolist())
         all_labels.extend(labels.tolist())
 
     return all_predictions, all_labels
 
 
-# 串起資料載入、模型訓練、權重儲存與最終評估流程。
+# 執行完整訓練流程。
 def main() -> None:
     args = parse_args()
     torch.manual_seed(args.seed)
 
     labels_df, summary = load_labels(args.labels)
     if summary.usable_rows == 0:
-        raise ValueError(
-            "No usable labels found. Fill the 'role' column with attack, defense, or support."
-        )
+        raise ValueError("No usable labels found in labels CSV.")
 
     if min(summary.class_counts.values()) < 2:
-        raise ValueError(
-            f"Each role needs at least 2 labeled images for train/validation split. Counts: {summary.class_counts}"
-        )
+        raise ValueError(f"Each class needs at least 2 samples. Counts: {summary.class_counts}")
 
     print(
         json.dumps(
@@ -175,6 +180,7 @@ def main() -> None:
                 "total_rows": summary.total_rows,
                 "usable_rows": summary.usable_rows,
                 "class_counts": summary.class_counts,
+                "architecture": args.architecture,
             },
             indent=2,
         )
@@ -209,7 +215,7 @@ def main() -> None:
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = build_model(num_classes=len(ROLE_NAMES)).to(device)
+    model = build_model(len(ROLE_NAMES), args.architecture).to(device)
     criterion = build_weighted_loss(train_df["label"].tolist(), device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -218,31 +224,26 @@ def main() -> None:
     checkpoint_path = output_dir / "best_model.pt"
 
     best_val_accuracy = -1.0
-
     for epoch in range(1, args.epochs + 1):
-        train_loss, train_accuracy = run_epoch(
-            model, train_loader, criterion, optimizer, device
-        )
-        val_loss, val_accuracy = run_epoch(model, val_loader, criterion, None, device)
-
+        train_loss, train_acc = run_epoch(model, train_loader, criterion, optimizer, device)
+        val_loss, val_acc = run_epoch(model, val_loader, criterion, None, device)
         print(
             f"epoch={epoch:02d} "
-            f"train_loss={train_loss:.4f} train_acc={train_accuracy:.4f} "
-            f"val_loss={val_loss:.4f} val_acc={val_accuracy:.4f}"
+            f"train_loss={train_loss:.4f} train_acc={train_acc:.4f} "
+            f"val_loss={val_loss:.4f} val_acc={val_acc:.4f}"
         )
 
-        if val_accuracy > best_val_accuracy:
-            best_val_accuracy = val_accuracy
+        if val_acc > best_val_accuracy:
+            best_val_accuracy = val_acc
             torch.save(
                 {
                     "model_state_dict": model.state_dict(),
                     "class_names": ROLE_NAMES,
                     "image_size": args.image_size,
+                    "architecture": args.architecture,
                 },
                 checkpoint_path,
             )
-
-    print(f"Best checkpoint saved to: {checkpoint_path}")
 
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -258,9 +259,9 @@ def main() -> None:
 
     report_path = output_dir / "classification_report.txt"
     report_path.write_text(report, encoding="utf-8")
+    print(f"Best checkpoint saved to: {checkpoint_path}")
     print(f"Classification report saved to: {report_path}")
 
 
-# 允許這個檔案直接從命令列執行。
 if __name__ == "__main__":
     main()

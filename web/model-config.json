@@ -5,6 +5,7 @@
     "support"
   ],
   "imageSize": 224,
+  "architecture": "mobilenet_v3_small",
   "inputName": "input",
   "outputName": "logits",
   "normalizeMean": [

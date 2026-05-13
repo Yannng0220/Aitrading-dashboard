@@ -3,14 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import onnx
 import torch
-from onnxconverter_common import float16
 
 from predict import build_model
 
 
-# 把訓練好的 PyTorch 權重匯出成瀏覽器可用的 ONNX 模型與設定檔。
+# 匯出網站前端使用的 ONNX 模型與設定檔。
 def main() -> None:
     checkpoint_path = Path("artifacts/best_model.pt")
     if not checkpoint_path.exists():
@@ -19,8 +17,9 @@ def main() -> None:
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     class_names = checkpoint["class_names"]
     image_size = int(checkpoint["image_size"])
+    architecture = checkpoint.get("architecture", "resnet18")
 
-    model = build_model(class_names)
+    model = build_model(class_names, architecture=architecture)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
 
@@ -29,24 +28,19 @@ def main() -> None:
 
     dummy_input = torch.randn(1, 3, image_size, image_size)
     onnx_path = export_dir / "pokemon-role-classifier.onnx"
-    temp_onnx_path = export_dir / "pokemon-role-classifier-fp32.onnx"
     torch.onnx.export(
         model,
         dummy_input,
-        temp_onnx_path.as_posix(),
+        onnx_path.as_posix(),
         input_names=["input"],
         output_names=["logits"],
         opset_version=17,
     )
 
-    fp32_model = onnx.load(temp_onnx_path.as_posix())
-    fp16_model = float16.convert_float_to_float16(fp32_model)
-    onnx.save(fp16_model, onnx_path.as_posix())
-    temp_onnx_path.unlink(missing_ok=True)
-
     config = {
         "classNames": class_names,
         "imageSize": image_size,
+        "architecture": architecture,
         "inputName": "input",
         "outputName": "logits",
         "normalizeMean": [0.485, 0.456, 0.406],
@@ -61,6 +55,5 @@ def main() -> None:
     print(f"Exported config to {export_dir / 'model-config.json'}")
 
 
-# 允許這個檔案直接從命令列執行。
 if __name__ == "__main__":
     main()
