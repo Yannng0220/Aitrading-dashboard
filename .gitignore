@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local API cache
+.pokeapi_cache/
+
+# Model outputs and training artifacts
+artifacts/
+*.pt
+*.pth
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
