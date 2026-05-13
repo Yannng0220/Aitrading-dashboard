@@ -13,14 +13,14 @@ let session = null;
 let modelConfig = null;
 let selectedImage = null;
 
-// 把角色名稱轉成更好讀的中文顯示。
+// 把角色名稱轉成更直覺的中文顯示。
 const roleLabelMap = {
   attack: "攻擊",
   defense: "防禦",
   support: "輔助",
 };
 
-// 載入 ONNX 模型與推論設定。
+// 載入 ONNX 模型與前處理設定。
 async function loadModel() {
   statusText.textContent = "模型載入中...";
   modelConfig = await fetch("./web/model-config.json").then((response) => response.json());
@@ -45,7 +45,7 @@ function handleImageChange(event) {
   previewPlaceholder.hidden = true;
 }
 
-// 把圖片畫到 canvas 並轉成模型需要的 tensor 格式。
+// 將圖片畫到 canvas，再轉成模型需要的 tensor。
 async function imageToTensor(file) {
   const bitmap = await createImageBitmap(file);
   const { imageSize, normalizeMean, normalizeStd } = modelConfig;
@@ -57,8 +57,7 @@ async function imageToTensor(file) {
   context.drawImage(bitmap, 0, 0, imageSize, imageSize);
 
   const { data } = context.getImageData(0, 0, imageSize, imageSize);
-  const channels = 3;
-  const floatData = new Float32Array(1 * channels * imageSize * imageSize);
+  const floatData = new Float32Array(1 * 3 * imageSize * imageSize);
 
   for (let y = 0; y < imageSize; y += 1) {
     for (let x = 0; x < imageSize; x += 1) {
@@ -80,7 +79,7 @@ async function imageToTensor(file) {
   return new ort.Tensor("float32", floatData, [1, 3, imageSize, imageSize]);
 }
 
-// 將 logits 轉成 softmax 機率。
+// 將模型輸出的 logits 轉成機率。
 function softmax(values) {
   const maxValue = Math.max(...values);
   const exps = values.map((value) => Math.exp(value - maxValue));
@@ -88,7 +87,7 @@ function softmax(values) {
   return exps.map((value) => value / sum);
 }
 
-// 更新畫面上的最終分類與各類別分數。
+// 把推論結果渲染到畫面上。
 function renderResults(probabilities) {
   const scores = modelConfig.classNames.map((className, index) => ({
     className,
@@ -123,7 +122,7 @@ function renderResults(probabilities) {
   }
 }
 
-// 執行瀏覽器端模型推論。
+// 執行瀏覽器端推論。
 async function runPrediction() {
   if (!selectedImage || !session || !modelConfig) {
     return;
