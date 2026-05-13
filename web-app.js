@@ -1,5 +1,3 @@
-import * as ort from "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js";
-
 const imageInput = document.getElementById("imageInput");
 const predictButton = document.getElementById("predictButton");
 const previewImage = document.getElementById("previewImage");
@@ -9,46 +7,62 @@ const winnerRole = document.getElementById("winnerRole");
 const winnerConfidence = document.getElementById("winnerConfidence");
 const scoreList = document.getElementById("scoreList");
 
-let session = null;
-let modelConfig = null;
-let selectedImage = null;
+const ort = globalThis.ort;
+const ASSET_VERSION = "20260513-2";
 
-// 角色名稱對照表。
 const roleLabelMap = {
   attack: "攻擊",
   defense: "防禦",
   support: "輔助",
 };
 
-// 顯示狀態文字。
+let session = null;
+let modelConfig = null;
+let selectedImage = null;
+
 function setStatus(message) {
   statusText.textContent = message;
 }
 
-// 載入 ONNX 模型與相關設定。
-async function loadModel() {
-  setStatus("模型載入中...");
+function withVersion(url) {
+  return `${url}?v=${ASSET_VERSION}`;
+}
 
-  // 明確指定 wasm 檔位置，避免 onnxruntime-web 在自訂網域下找錯路徑。
+async function fetchJson(url) {
+  const response = await fetch(withVersion(url), { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`無法讀取 ${url}，HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+async function loadModel() {
+  setStatus("模型初始化中...");
+
+  if (!ort) {
+    throw new Error("找不到 ONNX Runtime 全域物件 ort");
+  }
+  if (!ort.env) {
+    throw new Error("ONNX Runtime 缺少 env 設定");
+  }
+
+  ort.env.wasm = ort.env.wasm ?? {};
   ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
   ort.env.wasm.numThreads = 1;
 
-  modelConfig = await fetch("./web/model-config.json").then((response) => {
-    if (!response.ok) {
-      throw new Error(`無法讀取 model-config.json，HTTP ${response.status}`);
-    }
-    return response.json();
-  });
+  modelConfig = await fetchJson("./web/model-config.json");
 
-  session = await ort.InferenceSession.create("./web/pokemon-role-classifier.onnx", {
-    executionProviders: ["wasm"],
-  });
+  session = await ort.InferenceSession.create(
+    withVersion("./web/pokemon-role-classifier.onnx"),
+    {
+      executionProviders: ["wasm"],
+    },
+  );
 
-  setStatus("模型已就緒，可以開始分析。");
+  setStatus("模型已就緒，請選擇圖片開始分析。");
   predictButton.disabled = false;
 }
 
-// 讀取使用者圖片並顯示預覽。
 function handleImageChange(event) {
   const [file] = event.target.files ?? [];
   if (!file) {
@@ -62,7 +76,6 @@ function handleImageChange(event) {
   previewPlaceholder.hidden = true;
 }
 
-// 將圖片前處理成模型可用的 tensor。
 async function imageToTensor(file) {
   const bitmap = await createImageBitmap(file);
   const { imageSize, normalizeMean, normalizeStd } = modelConfig;
@@ -70,11 +83,15 @@ async function imageToTensor(file) {
   const canvas = document.createElement("canvas");
   canvas.width = imageSize;
   canvas.height = imageSize;
-  const context = canvas.getContext("2d");
-  context.drawImage(bitmap, 0, 0, imageSize, imageSize);
 
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("無法建立 Canvas 2D context");
+  }
+
+  context.drawImage(bitmap, 0, 0, imageSize, imageSize);
   const { data } = context.getImageData(0, 0, imageSize, imageSize);
-  const floatData = new Float32Array(1 * 3 * imageSize * imageSize);
+  const floatData = new Float32Array(3 * imageSize * imageSize);
 
   for (let y = 0; y < imageSize; y += 1) {
     for (let x = 0; x < imageSize; x += 1) {
@@ -96,7 +113,6 @@ async function imageToTensor(file) {
   return new ort.Tensor("float32", floatData, [1, 3, imageSize, imageSize]);
 }
 
-// 將 logits 轉成機率。
 function softmax(values) {
   const maxValue = Math.max(...values);
   const exps = values.map((value) => Math.exp(value - maxValue));
@@ -104,7 +120,6 @@ function softmax(values) {
   return exps.map((value) => value / sum);
 }
 
-// 將推論結果顯示到頁面上。
 function renderResults(probabilities) {
   const scores = modelConfig.classNames.map((className, index) => ({
     className,
@@ -117,19 +132,25 @@ function renderResults(probabilities) {
   winnerConfidence.textContent = `信心值: ${(winner.probability * 100).toFixed(2)}%`;
 
   scoreList.innerHTML = "";
+
   for (const score of scores) {
     const item = document.createElement("div");
     item.className = "score-item";
 
     const meta = document.createElement("div");
     meta.className = "score-meta";
-    meta.innerHTML = `
-      <span>${roleLabelMap[score.className] ?? score.className}</span>
-      <span>${(score.probability * 100).toFixed(2)}%</span>
-    `;
+
+    const label = document.createElement("span");
+    label.textContent = roleLabelMap[score.className] ?? score.className;
+
+    const value = document.createElement("span");
+    value.textContent = `${(score.probability * 100).toFixed(2)}%`;
+
+    meta.append(label, value);
 
     const bar = document.createElement("div");
     bar.className = "score-bar";
+
     const fill = document.createElement("div");
     fill.style.width = `${score.probability * 100}%`;
     bar.appendChild(fill);
@@ -139,7 +160,6 @@ function renderResults(probabilities) {
   }
 }
 
-// 執行推論。
 async function runPrediction() {
   if (!selectedImage || !session || !modelConfig) {
     return;
@@ -151,7 +171,13 @@ async function runPrediction() {
 
     const inputTensor = await imageToTensor(selectedImage);
     const outputs = await session.run({ [modelConfig.inputName]: inputTensor });
-    const logits = Array.from(outputs[modelConfig.outputName].data);
+    const logitsTensor = outputs[modelConfig.outputName];
+
+    if (!logitsTensor) {
+      throw new Error(`找不到模型輸出 ${modelConfig.outputName}`);
+    }
+
+    const logits = Array.from(logitsTensor.data);
     const probabilities = softmax(logits);
 
     renderResults(probabilities);

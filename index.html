@@ -10,10 +10,10 @@
     <main class="page">
       <section class="hero">
         <p class="eyebrow">Pokemon Role AI</p>
-        <h1>上傳寶可夢圖片，分析他偏向攻擊、防禦或輔助</h1>
+        <h1>攻擊、防禦或輔助</h1>
         <p class="subtitle">
-          模型會直接在瀏覽器中執行，不需要 Python 後端。這個版本適合部署到
-          Cloudflare Pages、GitHub Pages 或一般靜態網站空間。
+          模型會直接在瀏覽器中執行，不需要 Python 後端。這個版本適合部署到 Cloudflare Pages、
+          GitHub Pages 或一般靜態網站空間。
         </p>
       </section>
 
@@ -31,7 +31,7 @@
 
         <div class="preview-card">
           <div class="preview-frame">
-            <img id="previewImage" alt="預覽圖片" hidden />
+            <img id="previewImage" alt="圖片預覽" hidden />
             <p id="previewPlaceholder">圖片預覽會顯示在這裡</p>
           </div>
         </div>
@@ -40,7 +40,7 @@
       <section class="panel result-panel">
         <div class="result-head">
           <h2>分析結果</h2>
-          <p id="statusText">模型載入中...</p>
+          <p id="statusText">模型初始化中...</p>
         </div>
 
         <div class="result-main">
@@ -77,6 +77,7 @@
       </section>
     </main>
 
-    <script type="module" src="./web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <script type="module" src="./web-app.js?v=20260513-2"></script>
   </body>
 </html>
